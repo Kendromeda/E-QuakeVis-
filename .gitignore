@@ -1,0 +1,25 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.agents/
+.claude/
+.codex-tmp/
+.playwright-cli/
+.tmp/
+tmp/
+output/
+outputs/
+graphify-out/
+New folder/
+*.log
+nuitka-crash-report.xml
+desktop_nuitka/build/
+data/backups/
+data/.usgs_reviewed_catalog_chunks/
+data/*.sqlite
+data/*backup*.csv
+data/* - Copy.csv
+data/_batch.tmp
+.streamlit/*
+!.streamlit/secrets.toml.example

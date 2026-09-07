@@ -1,0 +1,1012 @@
+{
+ "1301": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Pesisir Selatan",
+  "domain": "pesselkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1302": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Solok",
+  "domain": "solokkab",
+  "jumlah_kecamatan": 14,
+  "min_density": 1.0
+ },
+ "1303": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Sijunjung",
+  "domain": "sijunjungkab",
+  "jumlah_kecamatan": 8,
+  "min_density": 1.0
+ },
+ "1304": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Tanah Datar",
+  "domain": "tanahdatarkab",
+  "jumlah_kecamatan": 14,
+  "min_density": 1.0
+ },
+ "1305": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Padang Pariaman",
+  "domain": "padangpariamankab",
+  "jumlah_kecamatan": 17,
+  "min_density": 1.0
+ },
+ "1306": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Agam",
+  "domain": "agamkab",
+  "jumlah_kecamatan": 16,
+  "min_density": 1.0
+ },
+ "1307": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Lima Puluh Kota",
+  "domain": "limapuluhkotakab",
+  "jumlah_kecamatan": 13,
+  "min_density": 1.0
+ },
+ "1308": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Pasaman",
+  "domain": "pasamankab",
+  "jumlah_kecamatan": 12,
+  "min_density": 1.0
+ },
+ "1309": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Kepulauan Mentawai",
+  "domain": "mentawaikab",
+  "jumlah_kecamatan": 10,
+  "min_density": 1.0
+ },
+ "1310": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Dharmasraya",
+  "domain": "dharmasrayakab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1311": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Solok Selatan",
+  "domain": "solokselatankab",
+  "jumlah_kecamatan": 7,
+  "min_density": 1.0
+ },
+ "1312": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kabupaten Pasaman Barat",
+  "domain": "pasamanbaratkab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1371": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Padang",
+  "domain": "padangkota",
+  "jumlah_kecamatan": 11
+ },
+ "1372": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Solok",
+  "domain": "solokkota",
+  "jumlah_kecamatan": 2
+ },
+ "1373": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Sawahlunto",
+  "domain": "sawahluntokota",
+  "jumlah_kecamatan": 4
+ },
+ "1374": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Padang Panjang",
+  "domain": "padangpanjangkota",
+  "jumlah_kecamatan": 2
+ },
+ "1375": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Bukittinggi",
+  "domain": "bukittinggikota",
+  "jumlah_kecamatan": 3
+ },
+ "1376": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Payakumbuh",
+  "domain": "payakumbuhkota",
+  "jumlah_kecamatan": 5
+ },
+ "1377": {
+  "provinsi": "Sumatera Barat",
+  "nama_kabupaten_kota": "Kota Pariaman",
+  "domain": "pariamankota",
+  "jumlah_kecamatan": 4
+ },
+ "1501": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Kerinci",
+  "domain": "kerincikab",
+  "jumlah_kecamatan": 18,
+  "min_density": 1.0
+ },
+ "1502": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Merangin",
+  "domain": "meranginkab",
+  "jumlah_kecamatan": 24,
+  "min_density": 1.0
+ },
+ "1503": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Sarolangun",
+  "domain": "sarolangunkab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1504": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Batanghari",
+  "domain": "batangharikab",
+  "jumlah_kecamatan": 8,
+  "min_density": 1.0
+ },
+ "1505": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Muaro Jambi",
+  "domain": "muarojambikab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1506": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Tanjung Jabung Barat",
+  "domain": "tanjabbarkab",
+  "jumlah_kecamatan": 13,
+  "min_density": 1.0
+ },
+ "1507": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Tanjung Jabung Timur",
+  "domain": "tanjabtimkab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1508": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kabupaten Bungo",
+  "domain": "bungokab",
+  "jumlah_kecamatan": 17,
+  "min_density": 1.0
+ },
+ "1509": {
+  "provinsi": "Jambi",
+ "nama_kabupaten_kota": "Kabupaten Tebo",
+ "domain": "tebokab",
+ "jumlah_kecamatan": 12,
+ "min_density": 1.0,
+ "density_scale_by_year": {
+  "2025": 0.01
+ }
+ },
+ "1571": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kota Jambi",
+  "domain": "jambikota",
+  "jumlah_kecamatan": 11
+ },
+ "1572": {
+  "provinsi": "Jambi",
+  "nama_kabupaten_kota": "Kota Sungai Penuh",
+  "domain": "sungaipenuhkota",
+  "jumlah_kecamatan": 8
+ },
+ "1601": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Ogan Komering Ulu",
+  "domain": "okukab",
+  "jumlah_kecamatan": 13,
+  "min_density": 1.0
+ },
+ "1602": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Ogan Komering Ilir",
+  "domain": "okikab",
+  "jumlah_kecamatan": 18,
+  "min_density": 1.0
+ },
+ "1603": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Muara Enim",
+  "domain": "muaraenimkab",
+  "jumlah_kecamatan": 22,
+  "min_density": 1.0
+ },
+ "1604": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Lahat",
+  "domain": "lahatkab",
+  "jumlah_kecamatan": 24,
+  "min_density": 1.0
+ },
+ "1605": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Musi Rawas",
+  "domain": "musirawaskab",
+  "jumlah_kecamatan": 14,
+  "min_density": 1.0
+ },
+ "1606": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Musi Banyuasin",
+  "domain": "musibanyuasinkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1607": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Banyuasin",
+  "domain": "banyuasinkab",
+  "jumlah_kecamatan": 21,
+  "min_density": 1.0
+ },
+ "1608": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Ogan Komering Ulu Timur",
+  "domain": "okutimurkab",
+  "jumlah_kecamatan": 20,
+  "min_density": 1.0
+ },
+ "1609": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Ogan Komering Ulu Selatan",
+  "domain": "okuselatankab",
+  "jumlah_kecamatan": 19,
+  "min_density": 1.0
+ },
+ "1610": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Ogan Ilir",
+  "domain": "oganilirkab",
+  "jumlah_kecamatan": 16,
+  "min_density": 1.0
+ },
+ "1611": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Empat Lawang",
+  "domain": "empatlawangkab",
+  "jumlah_kecamatan": 10,
+  "min_density": 1.0
+ },
+ "1612": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Penukal Abab Lematang Ilir",
+  "domain": "palikab",
+  "jumlah_kecamatan": 5,
+  "min_density": 1.0
+ },
+ "1613": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kabupaten Musi Rawas Utara",
+  "domain": "muratarakab",
+  "jumlah_kecamatan": 7,
+  "min_density": 1.0
+ },
+ "1671": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kota Palembang",
+  "domain": "palembangkota",
+  "jumlah_kecamatan": 18
+ },
+ "1672": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kota Pagar Alam",
+  "domain": "pagaralamkota",
+  "jumlah_kecamatan": 5
+ },
+ "1673": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kota Lubuk Linggau",
+  "domain": "lubuklinggaukota",
+  "jumlah_kecamatan": 8
+ },
+ "1674": {
+  "provinsi": "Sumatera Selatan",
+  "nama_kabupaten_kota": "Kota Prabumulih",
+  "domain": "prabumulihkota",
+  "jumlah_kecamatan": 6
+ },
+ "1701": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Bengkulu Selatan",
+  "domain": "bengkuluselatankab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1702": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Rejang Lebong",
+  "domain": "rejanglebongkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1703": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Bengkulu Utara",
+  "domain": "bengkuluutarakab",
+  "jumlah_kecamatan": 19,
+  "min_density": 1.0
+ },
+ "1704": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Kaur",
+  "domain": "kaurkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1705": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Seluma",
+  "domain": "selumakab",
+  "jumlah_kecamatan": 14,
+  "min_density": 1.0
+ },
+ "1706": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Muko Muko",
+  "domain": "mukomukokab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1707": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Lebong",
+  "domain": "lebongkab",
+  "jumlah_kecamatan": 12,
+  "min_density": 1.0
+ },
+ "1708": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Kepahiang",
+  "domain": "kepahiangkab",
+  "jumlah_kecamatan": 8,
+  "min_density": 1.0
+ },
+ "1709": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kabupaten Bengkulu Tengah",
+  "domain": "bengkulutengahkab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1771": {
+  "provinsi": "Bengkulu",
+  "nama_kabupaten_kota": "Kota Bengkulu",
+  "domain": "bengkulukota",
+  "jumlah_kecamatan": 9
+ },
+ "1801": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Lampung Selatan",
+  "domain": "lampungselatankab",
+  "jumlah_kecamatan": 17,
+  "min_density": 1.0
+ },
+ "1802": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Lampung Tengah",
+  "domain": "lampungtengahkab",
+  "jumlah_kecamatan": 28,
+  "min_density": 1.0
+ },
+ "1803": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Lampung Utara",
+  "domain": "lampungutarakab",
+  "jumlah_kecamatan": 23,
+  "min_density": 1.0
+ },
+ "1804": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Lampung Barat",
+  "domain": "lampungbaratkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1805": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Tulang Bawang",
+  "domain": "tulangbawangkab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1806": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Tanggamus",
+  "domain": "tanggamuskab",
+  "jumlah_kecamatan": 20,
+  "min_density": 1.0
+ },
+ "1807": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Lampung Timur",
+  "domain": "lampungtimurkab",
+  "jumlah_kecamatan": 24,
+  "min_density": 1.0
+ },
+ "1808": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Way Kanan",
+  "domain": "waykanankab",
+  "jumlah_kecamatan": 15,
+  "min_density": 1.0
+ },
+ "1809": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Pesawaran",
+  "domain": "pesawarankab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1810": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Pringsewu",
+  "domain": "pringsewukab",
+  "jumlah_kecamatan": 9,
+  "min_density": 1.0
+ },
+ "1811": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Mesuji",
+  "domain": "mesujikab",
+  "jumlah_kecamatan": 7,
+  "min_density": 1.0
+ },
+ "1812": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Tulang Bawang Barat",
+  "domain": "tubabakab",
+  "jumlah_kecamatan": 9,
+  "min_density": 1.0
+ },
+ "1813": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kabupaten Pesisir Barat",
+  "domain": "pesisirbaratkab",
+  "jumlah_kecamatan": 11,
+  "min_density": 1.0
+ },
+ "1871": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kota Bandar Lampung",
+  "domain": "bandarlampungkota",
+  "jumlah_kecamatan": 20
+ },
+ "1872": {
+  "provinsi": "Lampung",
+  "nama_kabupaten_kota": "Kota Metro",
+  "domain": "metrokota",
+  "jumlah_kecamatan": 5
+ },
+ "3301": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Cilacap",
+  "domain": "cilacapkab",
+  "jumlah_kecamatan": 24
+ },
+ "3302": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Banyumas",
+  "domain": "banyumaskab",
+  "jumlah_kecamatan": 27
+ },
+ "3303": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Purbalingga",
+  "domain": "purbalinggakab",
+  "jumlah_kecamatan": 18
+ },
+ "3304": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Banjarnegara",
+  "domain": "banjarnegarakab",
+  "jumlah_kecamatan": 20
+ },
+ "3305": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Kebumen",
+  "domain": "kebumenkab",
+  "jumlah_kecamatan": 26
+ },
+ "3306": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Purworejo",
+  "domain": "purworejokab",
+  "jumlah_kecamatan": 16
+ },
+ "3307": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Wonosobo",
+  "domain": "wonosobokab",
+  "jumlah_kecamatan": 15
+ },
+ "3308": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Magelang",
+  "domain": "magelangkab",
+  "jumlah_kecamatan": 21
+ },
+ "3309": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Boyolali",
+  "domain": "boyolalikab",
+  "jumlah_kecamatan": 22
+ },
+ "3310": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Klaten",
+  "domain": "klatenkab",
+  "jumlah_kecamatan": 26
+ },
+ "3311": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Sukoharjo",
+  "domain": "sukoharjokab",
+  "jumlah_kecamatan": 12
+ },
+ "3312": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Wonogiri",
+  "domain": "wonogirikab",
+  "jumlah_kecamatan": 25
+ },
+ "3313": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Karanganyar",
+  "domain": "karanganyarkab",
+  "jumlah_kecamatan": 17
+ },
+ "3314": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Sragen",
+  "domain": "sragenkab",
+  "jumlah_kecamatan": 20
+ },
+ "3315": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Grobogan",
+  "domain": "grobogankab",
+  "jumlah_kecamatan": 19
+ },
+ "3316": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Blora",
+  "domain": "blorakab",
+  "jumlah_kecamatan": 16
+ },
+ "3317": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Rembang",
+  "domain": "rembangkab",
+  "jumlah_kecamatan": 14
+ },
+ "3318": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Pati",
+  "domain": "patikab",
+  "jumlah_kecamatan": 21
+ },
+ "3319": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Kudus",
+  "domain": "kuduskab",
+  "jumlah_kecamatan": 9
+ },
+ "3320": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Jepara",
+  "domain": "jeparakab",
+  "jumlah_kecamatan": 16
+ },
+ "3321": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Demak",
+  "domain": "demakkab",
+  "jumlah_kecamatan": 14
+ },
+ "3322": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Semarang",
+  "domain": "semarangkab",
+  "jumlah_kecamatan": 19
+ },
+ "3323": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Temanggung",
+  "domain": "temanggungkab",
+  "jumlah_kecamatan": 20
+ },
+ "3324": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Kendal",
+  "domain": "kendalkab",
+  "jumlah_kecamatan": 20
+ },
+ "3325": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Batang",
+  "domain": "batangkab",
+  "jumlah_kecamatan": 15
+ },
+ "3326": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Pekalongan",
+  "domain": "pekalongankab",
+  "jumlah_kecamatan": 19
+ },
+ "3327": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Pemalang",
+  "domain": "pemalangkab",
+  "jumlah_kecamatan": 14
+ },
+ "3328": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Tegal",
+  "domain": "tegalkab",
+  "jumlah_kecamatan": 18
+ },
+ "3329": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kabupaten Brebes",
+  "domain": "brebeskab",
+  "jumlah_kecamatan": 17
+ },
+ "3371": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Magelang",
+  "domain": "magelangkota",
+  "jumlah_kecamatan": 3
+ },
+ "3372": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Surakarta",
+  "domain": "surakartakota",
+  "jumlah_kecamatan": 5
+ },
+ "3373": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Salatiga",
+  "domain": "salatigakota",
+  "jumlah_kecamatan": 4
+ },
+ "3374": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Semarang",
+  "domain": "semarangkota",
+  "jumlah_kecamatan": 16
+ },
+ "3375": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Pekalongan",
+  "domain": "pekalongankota",
+  "jumlah_kecamatan": 4
+ },
+ "3376": {
+  "provinsi": "Jawa Tengah",
+  "nama_kabupaten_kota": "Kota Tegal",
+  "domain": "tegalkota",
+  "jumlah_kecamatan": 4
+ },
+ "3401": {
+  "provinsi": "Daerah Istimewa Yogyakarta",
+  "nama_kabupaten_kota": "Kabupaten Kulon Progo",
+  "domain": "kulonprogokab",
+  "jumlah_kecamatan": 12
+ },
+ "3402": {
+  "provinsi": "Daerah Istimewa Yogyakarta",
+  "nama_kabupaten_kota": "Kabupaten Bantul",
+  "domain": "bantulkab",
+  "jumlah_kecamatan": 17
+ },
+ "3403": {
+  "provinsi": "Daerah Istimewa Yogyakarta",
+  "nama_kabupaten_kota": "Kabupaten Gunungkidul",
+  "domain": "gunungkidulkab",
+  "jumlah_kecamatan": 18
+ },
+ "3404": {
+  "provinsi": "Daerah Istimewa Yogyakarta",
+  "nama_kabupaten_kota": "Kabupaten Sleman",
+  "domain": "slemankab",
+  "jumlah_kecamatan": 17
+ },
+ "3471": {
+  "provinsi": "Daerah Istimewa Yogyakarta",
+  "nama_kabupaten_kota": "Kota Yogyakarta",
+  "domain": "jogjakota",
+  "jumlah_kecamatan": 14
+ },
+ "3501": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Pacitan",
+  "domain": "pacitankab",
+  "jumlah_kecamatan": 12
+ },
+ "3502": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Ponorogo",
+  "domain": "ponorogokab",
+  "jumlah_kecamatan": 21
+ },
+ "3503": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Trenggalek",
+  "domain": "trenggalekkab",
+  "jumlah_kecamatan": 14
+ },
+ "3504": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Tulungagung",
+  "domain": "tulungagungkab",
+  "jumlah_kecamatan": 19
+ },
+ "3505": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Blitar",
+  "domain": "blitarkab",
+  "jumlah_kecamatan": 22
+ },
+ "3506": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Kediri",
+  "domain": "kedirikab",
+  "jumlah_kecamatan": 26
+ },
+ "3507": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Malang",
+  "domain": "malangkab",
+  "jumlah_kecamatan": 33
+ },
+ "3508": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Lumajang",
+  "domain": "lumajangkab",
+  "jumlah_kecamatan": 21
+ },
+ "3509": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Jember",
+  "domain": "jemberkab",
+  "jumlah_kecamatan": 31
+ },
+ "3510": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Banyuwangi",
+  "domain": "banyuwangikab",
+  "jumlah_kecamatan": 25
+ },
+ "3511": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Bondowoso",
+  "domain": "bondowosokab",
+  "jumlah_kecamatan": 23
+ },
+ "3512": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Situbondo",
+  "domain": "situbondokab",
+  "jumlah_kecamatan": 17
+ },
+ "3513": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Probolinggo",
+  "domain": "probolinggokab",
+  "jumlah_kecamatan": 24
+ },
+ "3514": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Pasuruan",
+  "domain": "pasuruankab",
+  "jumlah_kecamatan": 24
+ },
+ "3515": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Sidoarjo",
+  "domain": "sidoarjokab",
+  "jumlah_kecamatan": 18
+ },
+ "3516": {
+ "provinsi": "Jawa Timur",
+ "nama_kabupaten_kota": "Kabupaten Mojokerto",
+ "domain": "mojokertokab",
+ "jumlah_kecamatan": 18,
+ "density_scale_by_year": {
+  "2024": 0.01
+ }
+ },
+ "3517": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Jombang",
+  "domain": "jombangkab",
+  "jumlah_kecamatan": 21
+ },
+ "3518": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Nganjuk",
+  "domain": "nganjukkab",
+  "jumlah_kecamatan": 20
+ },
+ "3519": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Madiun",
+  "domain": "madiunkab",
+  "jumlah_kecamatan": 15
+ },
+ "3520": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Magetan",
+  "domain": "magetankab",
+  "jumlah_kecamatan": 18
+ },
+ "3521": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Ngawi",
+  "domain": "ngawikab",
+  "jumlah_kecamatan": 19
+ },
+ "3522": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Bojonegoro",
+  "domain": "bojonegorokab",
+  "jumlah_kecamatan": 28
+ },
+ "3523": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Tuban",
+  "domain": "tubankab",
+  "jumlah_kecamatan": 20
+ },
+ "3524": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Lamongan",
+  "domain": "lamongankab",
+  "jumlah_kecamatan": 27
+ },
+ "3525": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Gresik",
+  "domain": "gresikkab",
+  "jumlah_kecamatan": 18
+ },
+ "3526": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Bangkalan",
+  "domain": "bangkalankab",
+  "jumlah_kecamatan": 18
+ },
+ "3527": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Sampang",
+  "domain": "sampangkab",
+  "jumlah_kecamatan": 14
+ },
+ "3528": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Pamekasan",
+  "domain": "pamekasankab",
+  "jumlah_kecamatan": 13
+ },
+ "3529": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kabupaten Sumenep",
+  "domain": "sumenepkab",
+  "jumlah_kecamatan": 27
+ },
+ "3571": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Kediri",
+  "domain": "kedirikota",
+  "jumlah_kecamatan": 3
+ },
+ "3572": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Blitar",
+  "domain": "blitarkota",
+  "jumlah_kecamatan": 3
+ },
+ "3573": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Malang",
+  "domain": "malangkota",
+  "jumlah_kecamatan": 5
+ },
+ "3574": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Probolinggo",
+  "domain": "probolinggokota",
+  "jumlah_kecamatan": 5
+ },
+ "3575": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Pasuruan",
+  "domain": "pasuruankota",
+  "jumlah_kecamatan": 4
+ },
+ "3576": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Mojokerto",
+  "domain": "mojokertokota",
+  "jumlah_kecamatan": 3
+ },
+ "3577": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Madiun",
+  "domain": "madiunkota",
+  "jumlah_kecamatan": 3
+ },
+ "3578": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Surabaya",
+  "domain": "surabayakota",
+  "jumlah_kecamatan": 31
+ },
+ "3579": {
+  "provinsi": "Jawa Timur",
+  "nama_kabupaten_kota": "Kota Batu",
+  "domain": "batukota",
+  "jumlah_kecamatan": 3
+ },
+ "3601": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kabupaten Pandeglang",
+  "domain": "pandeglangkab",
+  "jumlah_kecamatan": 35
+ },
+ "3602": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kabupaten Lebak",
+  "domain": "lebakkab",
+  "jumlah_kecamatan": 28
+ },
+ "3603": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kabupaten Tangerang",
+  "domain": "tangerangkab",
+  "jumlah_kecamatan": 29
+ },
+ "3604": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kabupaten Serang",
+  "domain": "serangkab",
+  "jumlah_kecamatan": 29
+ },
+ "3671": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kota Tangerang",
+  "domain": "tangerangkota",
+  "jumlah_kecamatan": 13
+ },
+ "3672": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kota Cilegon",
+  "domain": "cilegonkota",
+  "jumlah_kecamatan": 8
+ },
+ "3673": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kota Serang",
+  "domain": "serangkota",
+  "jumlah_kecamatan": 6
+ },
+ "3674": {
+  "provinsi": "Banten",
+  "nama_kabupaten_kota": "Kota Tangerang Selatan",
+  "domain": "tangselkota",
+  "jumlah_kecamatan": 7
+ }
+}

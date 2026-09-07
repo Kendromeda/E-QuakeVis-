@@ -1,0 +1,9 @@
+.git/
+.venv/
+.pytest_cache/
+.playwright-cli/
+.codex-tmp/
+__pycache__/
+graphify-out/
+output/
+tmp/

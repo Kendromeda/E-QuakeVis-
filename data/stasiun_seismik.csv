@@ -1,0 +1,453 @@
+#Network|Station|Latitude|Longitude|Elevation|SiteName|StartTime|EndTime
+IA|AAFM|-8.273409|124.723728|766.0|Station Type MR, Alor Selatan, Alor, NTT|2020-10-01T00:00:00|
+IA|AAI|-3.687117|128.194285|84.0|Station LIBRA, Karang Panjang, Sirimau, Kota Ambon, Maluku|2006-01-01T00:00:00|
+IA|AAII|-3.687137|128.194307|84.0|Station ex-CEA, Karang Panjang, Sirimau, Kota Ambon, Maluku|2006-12-01T00:00:00|
+IA|ABJI|-7.795672|114.234193|90.0|Station Asem Bagus, Java|2008-01-01T00:00:00|
+IA|ABSM|-3.425423|102.262932|381.0|Type MR, Argamakmur,Bengkulu Utara,Bengkulu|2019-01-01T00:00:00|
+IA|ACBM|-7.029698|107.682833|736.0|Type MR,Ayu Ciparay,Bandung,Jawa Barat|2022-08-05T00:00:00|
+IA|ACJM|-6.803202|108.615088|16.0|Type MR, Astanajapura,Cirebon,Jawa Barat|2019-01-01T00:00:00|
+IA|ALKI|-8.144362|124.590336|22.0|Station Alor, Indonesia (BMKG)|2010-10-01T00:00:00|
+IA|ALTI|-8.290721|125.125192|16.0|Station Type A, Alor Timur,Alor,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|AMPM|-1.267521|132.491782|421.0|Station Type MR, Aifat, Maybrat, Papua Barat|2020-10-01T00:00:00|
+IA|APSI|-0.910831|121.648672|70.0|Station Ampana, Sulawesi|2008-01-01T00:00:00|
+IA|ARMI|-5.774927|134.21894|16.0|Station Type A, Aru,Kepulauan Aru,Maluku|2019-01-01T00:00:00|
+IA|ARPI|-2.899632|140.747648|48.0|Station Type A, Arso ,Keerom,Papua|2019-01-01T00:00:00|
+IA|ATNI|-9.083521|124.864364|353.0|Station Atambua, BMG, Indonesia|2012-01-01T00:00:00|
+IA|BAJI|-7.090575|112.708575|13.0|Station Type B Bangkalan,Jawa Timur,Jawa Timur|2019-01-01T00:00:00|
+IA|BAKI|-1.16253|136.088609|51.0|Station Biak, Indonesia|2005-01-01T00:00:00|
+IA|BASI|-10.21894|120.577614|32.0|Station Baing, Sumba, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|BATI|-10.20648|123.663204|293.0|Station Kupang, Timor|2007-01-01T00:00:00|
+IA|BBBCM|-5.5771|120.448042|79.0|Station Type MR, Sulawesi Bonto Bahari, Selatan|2020-01-01T00:00:00|
+IA|BBCI|1.170136|121.422497|13.0|Station Type A,Biau,Buol,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BBCM|-5.039242|120.057972|570.0|Type MR, Bontocani,Bone,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|BBJI|-7.46254|107.64996|582.0|BMG-Net, Indonesia (IA-Net)|2016-09-05T00:00:00|
+IA|BBJM|-7.325914|111.808596|171.0|Type MR, Bubulan,Bojonegoro,Jawa Timur|2019-01-01T00:00:00|
+IA|BBKI|-3.46252|114.841161|41.0|Station Banjar Baru, Kalimantan|2007-01-01T00:00:00|
+IA|BBSI|-5.487738|122.571035|35.0|Station Bau Bau, Buton|2007-01-01T00:00:00|2015-12-20T00:00:00
+IA|BBSI|-5.487738|122.571035|35.0|Station Bau Bau, Buton|2015-12-20T00:00:00|
+IA|BDCM|-0.872622|119.586825|22.0|Type MR, Banawa Selatan ,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BESI|4.720048|96.86549|1392.0|Station Type A, Bukit,Bener Meriah,Aceh|2019-01-01T00:00:00|
+IA|BESM|4.151578|96.32534|23.0|Type MR, Beutong,Nagan Raya,Aceh|2019-01-01T00:00:00|
+IA|BGCI|-0.880745|123.393201|3.0|Station Type A, Balantak,Banggai,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BGCM|-0.049597|119.880022|8.0|Type MR, Balaesang,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BHCM|-2.7965|122.125892|6.0|Type MR, Bahodopi,Morowali,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BJI|-7.3329|109.7096|629.0|Station Banjarnegara, Indonesia|2005-01-01T00:00:00|2019-01-01T00:00:00
+IA|BKB|-1.107323|116.904841|41.0|GEOFON Station Balikpapan, Kalimantan, Indonesia|2005-12-06T00:00:00|
+IA|BKJI|-7.363273|108.53225|28.0|Station Type B Banjar,Kota Banjar,Jawa Barat|2019-01-01T00:00:00|
+IA|BKNI|0.326426|101.039703|55.0|GEOFON Station Bangkinang, Sumatra, Indonesia|2008-04-29T00:00:00|
+IA|BKSI|-5.321801|120.122439|541.0|Station Bulukumba, Sulawesi|2008-01-01T00:00:00|
+IA|BLCM|-0.122937|119.687039|8.0|Type MR, Balaesang Tanjung ,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BLJI|-7.745361|113.594626|192.0|Station Banyuglugur, Java|2008-01-01T00:00:00|
+IA|BLSI|-5.36757|105.245142|116.0|Station Bandar Lampung, Sumatra|2007-01-01T00:00:00|
+IA|BLSM|-3.14076|102.807119|63.0|Type MR, Batukuning Lakitan Ulu,Musi Rawas,Sumatera Selatan|2019-01-01T00:00:00|
+IA|BMBNG|-6.663606|110.884031|939.0|Station Type B Ternadi, Dawe, Kudus, Jawa Tengah|2021-12-31T00:00:00|
+IA|BMSI|-2.066379|102.315291|90.0|Station Type B Bangko,Merangin,Jambi|2019-01-01T00:00:00|
+IA|BNDI|-4.522451|129.904531|15.0|GEOFON Station Bandaneira, Indonesia|2008-07-04T00:00:00|
+IA|BNSI|-4.400575|120.106529|175.0|Station Bone, Sulawesi|2008-01-01T00:00:00|
+IA|BNTI|-8.786005|120.97686|1191.0|Station Type A, Bajawa,Ngada,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|BOJI|-7.568083024|110.6893992|152.0|Station Type B Sawit,Boyolali,Jawa Tengah|2019-01-01T00:00:00|
+IA|BOSM|-4.859198|104.020728|618.0|Type MR, Banding Agung,Oku Selatan,Sumatera Selatan|2019-01-01T00:00:00|
+IA|BPJI|-7.81045|109.99712|64.0|Station Type B Bagelen,Purworejo,Jawa Tengah|2019-01-01T00:00:00|
+IA|BPMJM|-6.950585|113.492239|211.0|Station Type MR, Batumarmar, Pamekasan, Jawa Timur|2020-01-01T00:00:00|
+IA|BPSM|-1.192367|100.589989|194.0|Type MR, Bayang,Pesisir Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|BSI|5.495993|95.296111|12.0|Station Banda Aceh, Indonesia|2005-01-01T00:00:00|
+IA|BSMI|-3.107553|130.493839|39.0|Station Bula, Tansi Ambon, Bula, Seram Bagian Timur, Maluku|2016-11-26T00:00:00|
+IA|BSSI|-6.142791|120.490346|51.0|Station Benteng, P.Selayar, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|BTCM|-2.476557|121.924308|15.0|Type MR, Bungku Tengah,Morowali,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|BTJI|-7.169465|109.12777|944.0|Station Type B Bumi Jawa,Tegal,Jawa Tengah|2019-01-01T00:00:00|
+IA|BUJI|-7.756083|109.461333|12.0|Station Type B Buayan,Kebumen,Jawa Tengah|2019-01-01T00:00:00|
+IA|BUSI|5.244515|96.243032|10.0|Station Type A, Bandar Baru,Pidie Jaya,Aceh|2019-01-01T00:00:00|
+IA|BWJI|-5.851017|112.658266|7.0|Station Bawean, BMG|2007-01-01T00:00:00|
+IA|BYJI|-8.214626|114.355644|46.0|Station Banyu Wangi, Java|2008-01-01T00:00:00|
+IA|BYLI|-8.227193|116.420254|28.0|Station Type A, Bayan,Lombok Utara ,Nusa Tenggara Barat|2019-01-01T00:00:00|
+IA|CASI|4.628777|95.576704|7.0|Calang, Sumatra, Indonesia|2018-10-22T00:00:00|
+IA|CBJI|-6.698133|106.934928|981.0|Station Citeko, Indonesia|2006-01-01T00:00:00|
+IA|CBJM|-6.935259|107.354842|701.0|Type MR, Cipongkor,Bandung Barat,Jawa Barat|2019-01-01T00:00:00|
+IA|CCJM|-7.016582|107.140054|1015.0|Type MR, Campaka,Cianjur,Jawa Barat|2019-01-01T00:00:00|
+IA|CGJI|-6.613472|105.692944|158.0|Station Cigeulis, Java|2008-01-01T00:00:00|
+IA|CIJI|-7.317494|108.19584|381.0|Station Type B Cipedes,Kota Tasikmalaya,Jawa Barat|2019-01-01T00:00:00|
+IA|CIJM|-6.492471|108.185278|22.0|Type MR, Cikedung,Indramayu,Jawa Barat|2019-01-01T00:00:00|
+IA|CISI|-7.5557|107.8153|544.0|GEOFON Station Cisomped, Java, Indonesia|2008-07-21T00:00:00|2015-08-11T00:00:00
+IA|CLJI|-7.7187|109.015|45.73|Station Cilacap, Java|2007-01-01T00:00:00|2010-04-20T00:00:00
+IA|CMJI|-7.783726|108.448484|42.0|Station Cimerak, Java|2008-01-01T00:00:00|
+IA|CNJI|-7.309032|107.129646|548.0|Station Cibinong, Java|2008-01-01T00:00:00|
+IA|CPPU|-6.4999|107.0669|152.0|BMG-Net, Indonesia (IA-Net)|2019-10-31T00:00:00|
+IA|CSJI|-7.330128|106.521055|93.0|Station Type B Ciracap,Sukabumi,Jawa Barat|2019-01-01T00:00:00|
+IA|CSJM|-6.740532|108.009905|357.0|Type MR, Congeang,Sumedang,Jawa Barat|2019-01-01T00:00:00|
+IA|CTJI|-7.007556|109.183566|85.0|Station Waduk Cacaban, Java, BMG, Indonesia|2007-01-01T00:00:00|
+IA|CWJM|-6.742316|107.444799|633.0|Type MR, Cikalong Wetan,Bandung Barat,Jawa Barat|2019-01-01T00:00:00|
+IA|DBJI|-6.554284|106.743689|166.0|Station Dramaga, Java|2007-01-01T00:00:00|
+IA|DBKI|-1.67931|114.907958|20.0|Station Type A, Dusun Selatan,Barito Selatan,Kalimantan Tengah|2019-01-01T00:00:00|
+IA|DBNFM|-8.423983|118.594867|688.0|Station Type MR, Donggo, Nusa Tenggara Barat|2020-11-01T00:00:00|
+IA|DBNI|-8.501857|118.312129|137.0|Station Kabupaten Dompu, Sumbawa, BMG, Indonesia|2007-01-01T00:00:00|
+IA|DDSI|1.603596|101.391405|34.0|Station Type A, Dumai Timur Riau|2019-01-01T00:00:00|
+IA|DNP|-8.677307|115.209775|16.0|Station Denpasar, Indonesia|2006-01-01T00:00:00|
+IA|DNPB|-8.738774|115.178522|8.0|DNPB|2020-04-09T00:00:00|
+IA|DOCM|-0.675796|119.748955|52.0|Type MR, Donggala,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|DSRI|-0.47938|104.577797|27.0|Singkep,Lingga,Kepulauan Riau|2007-01-01T00:00:00|
+IA|DWIKO|-8.0102|110.414|361.0|Station Type MR, Panggang, Gunung Kidul, DIY|2020-10-01T00:00:00|
+IA|DYPI|-4.8521|139.4991|58.0|Station Type A, Dekai,Yakuhimo,Papua|2019-01-01T00:00:00|
+IA|EDFI|-8.749768|121.690301|844.0|Station Ende, Flores, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|EGSI|-5.352631|102.276745|24.0|Station Enggano, Bengkulu, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|ERPI|-3.926885|136.380992|1767.0|Enarotali, East Paniai, Papua|2017-12-01T00:00:00|
+IA|FAKI|-2.919167|132.265125|137.0|GEOFON Station Fakfak, Indonesia|2008-11-26T00:00:00|
+IA|FKMPM|-8.251516|140.266588|12.0|Station Type MR, Kurik, Merauke, Papua|2020-10-01T00:00:00|
+IA|GBJI|-6.948407|109.965948|43.0|Station Type B Gringsing,Batang,Jawa Tengah|2019-01-01T00:00:00|
+IA|GEJI|-8.410074|112.645025|25.0|Station Type B Gedangan,Malang,Jawa Timur|2019-01-01T00:00:00|
+IA|GENI|-2.592655|140.167709|51.0|GEOFON Station Genyem, Indonesia|2009-11-26T00:00:00|
+IA|GESM|4.84219|96.127842|455.0|Type MR, Geumpang,Pidie,Aceh|2019-01-01T00:00:00|
+IA|GGJI|-7.03022|110.92097|82.0|Station Type B Grobogan,Grobogan,Jawa Tengah|2019-01-01T00:00:00|
+IA|GGJM|-7.171577|111.203513|71.0|Type MR, Gabus,Grobogan,Jawa Tengah|2019-01-01T00:00:00|
+IA|GHMI|-0.356253|127.849771|27.0|Station Type A, Gane Barat,Halmahera Selatan,Maluku Utara|2019-01-01T00:00:00|
+IA|GKJM|-7.841047|110.592157|205.0|Type MR, Gedangsari,Gunung Kidul,D.I Yogyakarta|2019-01-01T00:00:00|
+IA|GLMI|1.83807|127.787922|40.0|Station Galela, Maluku, Indonesia|2009-01-01T00:00:00|
+IA|GMJI|-8.273139|113.444222|20.0|Station Gumukmas, Java|2008-01-01T00:00:00|
+IA|GPSM|4.869367|96.090433|409.0|Type MR, Geumpang,Pidie,Aceh|2019-01-01T00:00:00|
+IA|GRJI|-6.914417|112.479373|37.0|Station Gresik, Java|2008-01-01T00:00:00|
+IA|GSI|1.303551|97.575354|108.0|GEOFON Station Gunungsitoli, Nias|2005-10-02T00:00:00|
+IA|GTJI|-7.16376|110.18377|698.0|Station Type B, Gemawang Temanggung|2021-12-31T00:00:00|
+IA|GTOI|0.762827|122.869994|212.0|Station Gorontalo China|2006-12-01T00:00:00|
+IA|GTSI|-0.598018|101.488861|56.0|Station Type A, Gunung Toar,Kuantan Singingi,Riau|2019-01-01T00:00:00|
+IA|GUJM|-7.054265|110.666328|13.0|Type MR, Gubug,Grobogan,Jawa Tengah|2019-01-01T00:00:00|
+IA|IATSM|4.924095|97.784537|34.0|Station Type MR, Idi, Aceh Timur, Sumatera|2020-10-01T00:00:00|
+IA|IBTI|-8.385773|123.25841|85.0|Station Type A, Ile Boleng,Flores Timur,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|IGBI|-8.818003|115.145576|192.0|Station Ingas Bali China|2006-12-01T00:00:00|
+IA|IHMI|1.508228|127.555663|60.0|Station Type A, Ibu,Halmahera Barat,Maluku Utara|2019-01-01T00:00:00|
+IA|IWPI|-2.758193|134.516188|54.0|Station Type A, Rasiei,Teluk Wondama,Papua Barat|2019-01-01T00:00:00|
+IA|JAGI|-8.470249|114.152034|99.0|GEOFON Station Jajag, Java, Indonesia|2008-07-21T00:00:00|
+IA|JASI|-1.414579|101.458512|238.0|Station Type B Sangir Balai Janggo,Solok Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|JAY|-2.514268|140.703224|373.0|Station Jayapura, Indonesia|2006-01-01T00:00:00|
+IA|JBJI|-6.483712|106.469889|90.0|Station Type B Jasinga,Bogor,Jawa Barat|2019-01-01T00:00:00|
+IA|JBJM|-6.972967|111.45877|86.0|Type MR, Jepon,Blora,Jawa Tengah|2019-01-01T00:00:00|
+IA|JCJI|-6.73434|108.263078|46.0|Station Jatiwangi, Indonesia|2006-01-01T00:00:00|
+IA|JHMI|1.082028|127.47842|19.0|Station Type A, Jailolo,Halmahera Barat,Maluku Utara|2019-01-01T00:00:00|
+IA|JMBI|-1.676397|103.575995|54.0|Station Jambi China|2006-12-01T00:00:00|
+IA|JMSI|-2.637131|101.887492|1244.0|Station Type B Jangkat,Merangin,Jambi|2019-01-01T00:00:00|
+IA|JPJI|-6.530659|107.417601|113.0|Station Type B Jatiluhur,Purwakarta,Jawa Barat|2019-01-01T00:00:00|
+IA|JPSI|-1.341545|100.586523|20.0|Station Type B Jurai,Pesisir Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|JSBFM|-8.871656|116.816451|30.0|Station Type MR, Jereweh, Nusa Tenggara Barat|2020-01-01T00:00:00|
+IA|JTJM|-7.05703|106.801317|525.0|Type MR, Jampang Tengah,Sukabumi,Jawa Barat|2019-01-01T00:00:00|
+IA|JTPU|-6.523|107.388|152.0|BMG-Net, Indonesia (IA-Net)|2019-10-31T00:00:00|
+IA|JWJM|-7.20623|110.731432|85.0|Type MR, Juwangi ,Boyolali,Jawa Tengah|2019-01-01T00:00:00|
+IA|KASI|-5.523529|104.496|16.0|Station Kota Agung, Sumatra|2008-01-01T00:00:00|
+IA|KBBI|-8.285699|115.254889|985.0|Station Type B Kintamani,Bangli,Bali|2019-01-01T00:00:00|
+IA|KBJM|-7.050449|111.233042|56.0|Type MR, Kunduran,Blora,Jawa Tengah|2019-01-01T00:00:00|
+IA|KBKI|-3.299521|116.166774|10.0|Station Kotabaru, Kalimantan|2008-01-01T00:00:00|
+IA|KCSI|3.522218|97.771592|195.0|Station Kotacane, Aceh, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|KDI|-3.957701|122.619257|16.0|Station Kendari, Sulawesi|2006-12-26T00:00:00|
+IA|KGCM|0.639702|122.851659|25.0|Type MR, Kwandang,Gorontalo,Gorontalo|2019-01-01T00:00:00|
+IA|KHK|-8.365226|115.611257|155.0|Station Kahang-Kahang, Bali|2007-04-03T00:00:00|
+IA|KJCM|-5.564632483|119.8025621|194.0|Station Type MR, Kelara, Sulawesi Selatan|2019-11-01T00:00:00|
+IA|KKKI|-2.515302|110.19572|7.0|Station Type A, Kendawangan,Ketapang,Kalimantan Barat|2019-01-01T00:00:00|
+IA|KKMI|-5.692429|132.718003|20.0|Station Type A, Kei Kecil,Maluku Tenggara,Maluku|2019-01-01T00:00:00|
+IA|KKSI|-4.171813|121.651239|9.0|Station Kolaka, Sulawesi, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|KLI|-4.836408|104.870425|29.0|Station Kotabumi, Indonesia|2006-01-01T00:00:00|
+IA|KLJI|-7.995996|113.251719|191.0|Station Type B Klakah,Lumajang,Jawa Timur|2019-01-01T00:00:00|
+IA|KLNI|-8.421911|116.094875|61.0|Station Mataram, Plombok, BMG, Indonesia|2007-01-01T00:00:00|
+IA|KLSI|-4.687131507|104.7316881|53.0|Station Kotabumi China|2007-07-01T00:00:00|
+IA|KLSM|3.086355|97.329789|10.0|Type MR, Kluet Utara,Aceh Selatan,Aceh|2019-01-01T00:00:00|
+IA|KMBFM|-8.565369|120.313063|1154.0|Station Type MR, Kuwus, Manggarai Barat, Nusa Tenggara Timur|2020-10-01T00:00:00|
+IA|KMMI|-7.041368|113.915708|3.0|Station Kalianget, Indonesia|2006-01-01T00:00:00|
+IA|KMPI|-3.661709|133.704327|12.0|Station Kaimana, Papua, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|KMSI|0.574514693|123.980612|149.0|Station Kotamubagu, Sulawesi|2008-01-01T00:00:00|
+IA|KPJI|-7.333231|108.931223|413.0|Station Karang Pucung, Java|2008-01-01T00:00:00|
+IA|KPJM|-7.188228|111.928057|25.0|Type MR, Kapas,Bojonegoro,Jawa Timur|2019-01-01T00:00:00|
+IA|KRAI|-3.318324|128.394806|56.0|Station LIBRA, Ursana, Kairatu, Seram Bagian Barat , Maluku (BMKG)|2009-10-20T00:00:00|
+IA|KRJI|-2.091221|101.461925|795.0|Station Kerinci, Sumatra|2007-01-01T00:00:00|
+IA|KRK|-8.1521|112.4506|330.26|Station Karangkates, Indonesia|2006-01-01T00:00:00|2018-10-30T00:00:00
+IA|KRSI|-1.81764|119.418448|38.0|Station Karosa China|2019-11-01T00:00:00|
+IA|KSI|-3.650962|102.59286|504.0|Station Kepahiang, Indonesia|2005-01-01T00:00:00|
+IA|KTMI|-7.669159|131.5791|29.0|Station Type A, Kormomolin,Kepulauan Tanimbar,Maluku|2019-01-01T00:00:00|
+IA|KTTI|-10.013545|124.533941|77.0|Station Type A, Kolbano,Timor Tengah Selatan,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|KUSI|3.196473|97.370729|47.0|Station Type A, Kluet Utara,Aceh Selatan,Aceh|2019-01-01T00:00:00|
+IA|KWJI|-7.383274469|109.9692758|894.0|Station Type B Kertek,Wonosobo,Jawa Tengah|2019-01-01T00:00:00|
+IA|LASI|4.457225|97.970404|13.0|Station Langsa, Aceh, Sumatra, Indonesia (BMKG)|2009-10-20T00:00:00|
+IA|LBFI|-8.483538|119.891886|62.0|Station Labuhan Bajo China|2006-12-01T00:00:00|
+IA|LBMI|-0.637881|127.500799|25.0|Station Labuha, Bacan, Indonesia|2007-01-01T00:00:00|
+IA|LBNFM|-8.601823|119.012417|9.0|Station Type MR, Lambu, Nusa Tenggara Barat|2020-01-01T00:00:00|
+IA|LDSI|2.886167|98.157139|789.0|Sukandebi, Sumatra Utara|2019-09-16T00:00:00|
+IA|LEM|-6.82646|107.617606|1265.0|Station Lembang, Indonesia|2010-09-29T16:55:00|
+IA|LESM|-4.961561|103.712573|26.0|Type MR, Lemong,Pesisir Barat,Lampung|2019-01-01T00:00:00|
+IA|LHMI|5.228673|96.947185|25.0|GEOFON Station Lhokseumave, Sumatra, Indonesia|2008-02-29T00:00:00|
+IA|LHSI|-3.826665|103.523308|167.0|Station Lahat, Sumatra|2008-01-01T00:00:00|
+IA|LHSM|-4.178039|103.575441|1057.0|Type MR, Semendo,Lahat,Sumatera Selatan|2019-01-01T00:00:00|
+IA|LISM|4.431541|96.862624|1452.0|Type MR, Lingge Isaq,Aceh Tengah,Aceh|2019-01-01T00:00:00|
+IA|LJPI|-3.079255|139.94997|248.0|Station Type A, Lereh,Jayapura,Papua|2019-01-01T00:00:00|
+IA|LKCI|-3.492015|120.885791|8.0|Station Type A, Lasusua, Lasusua, Sulawesi Tenggara|2019-01-01T00:00:00|
+IA|LKSM|-0.184486|100.600648|509.0|Type MR, Suliki,Limapuluh Koto,Sumatera Barat|2019-01-01T00:00:00|
+IA|LKUCM|-3.292356293|122.2331649|67.0|Station Type MR, Langgikima, Sulawesi Tenggara|2020-11-01T00:00:00|
+IA|LLSI|-3.278438|102.914006|96.0|Station Type B Lubuk Linggau Barat,Kota Lubuk Linggau,Sumatera Selatan|2019-01-01T00:00:00|
+IA|LLSM|-5.600459|104.809419|18.0|Type MR, Limau,Tanggamus,Lampung|2019-01-01T00:00:00|
+IA|LMNI|-8.233836691|123.7157044|74.0|Station Lembata China|2019-11-01T00:00:00|
+IA|LMTI|-8.601108|120.477058|1140.0|Station Type A, Langke Rembong,Manggarai,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|LOCM|-1.649959|120.18304|1376.0|Type MR, Lore Tengah,Poso,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|LPCM|-3.501204|119.537496|28.0|Type MR, Lembang,Pinrang,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|LPSM|-1.708129|100.720077|12.0|Type MR, Lengayang,Pesisir Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|LRTI|-8.275308|123.000978|14.0|Station LRTI|2013-01-01T00:00:00|
+IA|LSCM|-4.364995|119.898796|103.0|Type MR, Lalabati Rilau,Soppeng,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|LTSM|1.529175|98.93048|15.0|Type MR, Lumut,Tapanuli Tengah,Sumatera Utara|2019-01-01T00:00:00|
+IA|LUCM|-1.426185|120.322385|1104.0|Type MR, Lore Utara,Poso,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|LUJI|-7.826017144|113.010743|604.0|Station Type B Lumbang,Pasuruan,Jawa Timur|2019-01-01T00:00:00|
+IA|LUWI|-1.041759|122.771704|6.0|GEOFON Station Luwuk, Sulawesi, Indonesia|2008-03-10T00:00:00|
+IA|LWLI|-5.017459|104.058904|909.0|Station Liwa, Sumatra|2007-01-01T00:00:00|
+IA|MASI|-3.141518132|102.2396852|370.0|Station Muara Aman, Bengkulu, Indonesia|2009-01-01T00:00:00|
+IA|MASM|5.298644|95.59648|111.0|Type MR, Masjid Raya,Aceh Besar,Aceh|2019-01-01T00:00:00|
+IA|MBBI|-1.541063|102.09876|89.0|Station Type B Muara Bungo,Bungo,Jambi|2019-01-01T00:00:00|
+IA|MBJI|-7.448874|109.632311|344.0|Station Majalengka Banjarnegara Jawa Indonesia|2018-10-22T00:00:00|
+IA|MBPI|-2.032582|133.731446|60.0|Station Type A, Manimeri,Teluk Bintuni,Papua Barat|2019-01-01T00:00:00|
+IA|MBSI|-3.7611|102.2714|28.05|Station University, Bengkulu, Indonesia (BMKG)|2008-01-01T00:00:00|2010-04-20T00:00:00
+IA|MBSM|-3.145142|101.83735|62.0|Type MR, Marga Sakti Seblat ,Bengkulu Utara,Bengkulu|2019-01-01T00:00:00|
+IA|MDSI|-4.486017|104.178265|107.0|Station Muara Dua, Sumatra|2008-01-01T00:00:00|
+IA|MGAI|4.007978|126.678947|56.0|Station MGAI|2013-01-01T00:00:00|
+IA|MIPI|-4.529293|136.892783|24.0|Station Type A, Mimika Baru,Mimika,Papua|2019-01-01T00:00:00|
+IA|MJSI|-3.5008|118.9149|306.8|Station Majene, Sulawesi|2007-01-01T00:00:00|2010-04-20T00:00:00
+IA|MKBI|-2.447424|101.239605|43.0|Station Muko-Muko, Bengkulu, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|MKJM|-7.662362|110.483704|405.0|Type MR, Manisrenggo,Klaten,Jawa Tengah|2019-01-01T00:00:00|
+IA|MKS|-5.217807|119.469638|24.0|Station Gowa, Sulawesi, Indonesia|2015-01-01T00:00:00|
+IA|MKSM|-4.571035|103.360264|288.0|Type MR, Muara Sahung,Kaur,Bengkulu|2019-01-01T00:00:00|
+IA|MLJI|-8.157464|112.446802|271.0|Malang Jawa Indonesia|2018-10-30T00:00:00|
+IA|MLJM|-7.248568|112.337875|50.0|Type MR, Mantup,Lamongan,Jawa Timur|2019-01-01T00:00:00|
+IA|MLSI|4.266915952|96.40397442|58.0|Station Meulaboh, Aceh, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|MMCI|-2.956051|119.363157|1116.0|Station Type A, Mamasa,Mamasa,Sulawesi Barat|2019-01-01T00:00:00|
+IA|MMPI|-8.518124|140.414199|16.0|Station Merauke, Indonesia|2006-01-01T00:00:00|
+IA|MMRI|-8.635713|122.237637|28.0|GEOFON Station Maumere, Flores, Indonesia|2006-11-09T00:00:00|
+IA|MMSI|-2.689179|118.908671|144.0|Station Mamuju China|2006-12-01T00:00:00|
+IA|MNAI|-4.360572|102.955783|131.0|GEOFON Station Manna, Sumatra, Indonesia|2006-07-27T00:00:00|
+IA|MNI|1.443636|124.838935|116.0|Station Manado, Sulawesi|2005-01-01T00:00:00|
+IA|MNSI|0.795555|99.579571|283.0|Station Mandailing Natal, Sumatra|2008-01-01T00:00:00|
+IA|MPSI|0.337329|119.898021|81.0|Station Mapaga, Sulawesi|2008-01-01T00:00:00|
+IA|MPSM|0.589215|100.138309|192.0|Type MR, Mapat Tunggul,Pasaman,Sumatera Barat|2019-01-01T00:00:00|
+IA|MRSI|0.477022|121.940542|29.0|Station Marisa, Sulawesi|2008-01-01T00:00:00|
+IA|MSAI|-3.346201|128.928474|14.0|Station LIBRA, Soahuku, Amahai, Maluku Tengah, Maluku|2007-01-01T00:00:00|
+IA|MSCM|-2.535838|120.281322|101.0|Type MR, Masamba,Luwu Utara,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|MSSI|-2.5547|120.3241|116.0|Station Masamba, Sulawesi|2007-01-01T00:00:00|2008-12-22T00:00:00
+IA|MTAI|2.198084|128.275843|24.0|Station Morotai, North Maluku, Indonesia|2018-09-14T00:00:00|
+IA|MTCM|-2.573853|121.054432|28.0|Type MR, Malili,Luwu Timur,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|MTKI|-0.941886|114.895927|26.0|Station Muara Teweh, Kalimantan, Indonesia (BMKG)|2008-06-21T00:00:00|
+IA|MTNI|-8.636|116.1707|108.3|Station Mataram, Plombok|2007-01-01T00:00:00|2010-04-20T00:00:00
+IA|MTSI|2.152453|98.252387|11.0|Station Type A, Manduamas,Tapanuli Tengah,Sumatera Utara|2019-01-01T00:00:00|
+IA|MTSM|-4.47922|103.506107|799.0|Type MR, Muara Dua,Oku Selatan,Sumatera Selatan|2019-01-01T00:00:00|
+IA|MWPI|-0.9259|134.042798|30.0|Station Manokwari China|2009-07-01T00:00:00|
+IA|NBBI|-8.4597|114.942|300.74|Station Negara, Indonesia|2006-01-01T00:00:00|2010-04-20T00:00:00
+IA|NBMI|-3.850959|126.699546|8.0|Station Type A, Lektama,  Namrole, Buru Selatan, Maluku|2019-01-01T00:00:00|
+IA|NBPI|-3.365645|135.497174|8.0|Station NBPI (ex-JAY1)|2012-10-26T00:00:00|
+IA|NGJI|-7.367536|111.461205|84.0|Station Ngawi, Java|2008-01-01T00:00:00|
+IA|NJBM|-8.309777|114.617102|127.0|Station Type MR, Negara, Bali|2020-01-01T00:00:00|
+IA|NKBI|-8.726069|115.525796|388.0|Station Type B Nusa Penida,Klungkung,Bali|2019-01-01T00:00:00|
+IA|NKKI|-1.560535|110.566778|24.0|Station Type A, Nangan Tayap, Ketapang, Kalimantan Barat|2019-01-01T00:00:00|
+IA|NLAI|-3.238967|127.099805|17.0|Station Namlea, Ambon, Maluku|2008-01-01T00:00:00|
+IA|NSBMM|-3.082876|128.209584|14.0|Station Type MR, Neniari, Seram Barat, Seram Bagian Barat, Maluku|2020-10-01T00:00:00|
+IA|OBMI|-1.341287|127.64443|4.0|Station Pulau, BMG, Indonesia|2012-01-01T00:00:00|
+IA|OMBFM|-8.691117|119.824739|20.0|Station Type MR, Komodo, Manggarai Barat, NTT|2020-10-01T00:00:00|
+IA|ONSM|2.159899|98.630041|1157.0|Type MR, Onan Ganjang,Humbang Hasundutan,Sumatera Utara|2019-01-01T00:00:00|
+IA|PABI|0.123568|99.87188|146.0|Station Type A, Pasaman,Pasaman Barat,Sumatera Barat|2019-01-01T00:00:00|
+IA|PAFM|-8.383225|124.128328|16.0|Station Type MR, Pantar Tengah, Alor, NTT|2020-10-01T00:00:00|
+IA|PBCI|0.383055|124.039666|38.0|Station Type A, Poigar,Bolaang Mongondow,Sulawesi Utara|2019-01-01T00:00:00|
+IA|PBJI|-7.087422|107.475807|1053.0|Station Type B, Pasir Jambu|2019-01-01T00:00:00|
+IA|PBKI|-2.7047132|111.6696717|9.0|Station Pangkalan Bun, Kalimantan|2007-01-01T00:00:00|
+IA|PBLI|-8.751679|116.250455|113.0|Station Type A, Pujut,Lombok Tengah ,Nusa Tenggara Barat|2019-01-01T00:00:00|
+IA|PBSI|-0.054631|98.280032|19.0|Station Pulau Batu, Sumatra|2008-01-01T00:00:00|
+IA|PCI|-0.90552|119.836694|76.0|Station Palu, Indonesia|2005-01-01T00:00:00|
+IA|PCJI|-8.194701|111.177029|648.0|Station Pacitan, Java|2008-01-01T00:00:00|
+IA|PCJM|-6.912953|108.719189|13.0|Type MR, Pabuaran,Cirebon,Jawa Barat|2019-01-01T00:00:00|
+IA|PDGB|-0.545611|100.298859|129.0|PDGB|2020-04-13T01:55:00|
+IA|PDLI|-8.219618|117.716285|71.0|Station Type A,Tambora,Dompu,Nusa Tenggara Barat|2019-01-01T00:00:00|
+IA|PDSI|-0.9118|100.4618|258.0|Station Padang, Sumatra|2007-01-01T00:00:00|
+IA|PGJM|-8.010236|110.414185|312.0|Station Type MR, Panggang, Gunung Kidul, DIY|2020-10-01T00:00:00|
+IA|PICM|-0.710988|120.088781|38.0|Type MR, Parigi Utara,Parigi Moutong,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|PKCI|-4.350903|122.343691|108.0|Station Type A, Palangga, Palangga,Sulawesi Tenggara|2019-01-01T00:00:00|
+IA|PKJI|-7.167706|109.579463|549.0|Station Type B Paninggaran,Pekalongan,Jawa Tengah|2019-01-01T00:00:00|
+IA|PKJM|-6.795826|108.439903|270.0|Type MR, Pasawahan,Kuningan,Jawa Barat|2019-01-01T00:00:00|
+IA|PKKI|-2.241137|113.972174|21.0|Station Palangkaraya, Kalimantan, Indonesia|2007-01-01T00:00:00|
+IA|PKSI|-4.042728|103.263875|720.0|Station Type B Pagar Alam Utara,Kota Pagar Alam,Sumatera Selatan|2019-01-01T00:00:00|
+IA|PLAI|-8.827399|117.776482|47.0|Plampang, Indonesia|2011-03-04T00:00:00|
+IA|PLJI|-7.861577|112.155203|210.0|Station Type B Plosoklaten,Kediri,Jawa Timur|2019-01-01T00:00:00|
+IA|PLKI|-2.2262|113.9453|69.73|Station Palangkaraya, Kalimantan|2007-01-01T00:00:00|2010-04-20T00:00:00
+IA|PLSI|0.237283|100.554076|120.0|Station Type B Pangkalan Koto Baru,Lima Puluh Koto,Sumatera Barat|2019-01-01T00:00:00|
+IA|PLSM|1.539962|99.646257|135.0|Type MR, Sosa,Padanglawas,Sumatera Utara|2019-01-01T00:00:00|
+IA|PMBI|-2.902282|104.699526|14.0|GEOFON Station Palembang, Sumatra, Indonesia|2005-12-06T00:00:00|
+IA|PMCI|-1.172888|119.347761|26.0|Station Type A, Pasangkayu, Mamuju Utara, Sulawesi Barat|2019-01-01T00:00:00|
+IA|PMMI|0.373929|127.415263|17.0|Station Type A, Pulau Makian,Halmahera Selatan,Maluku Utara|2019-01-01T00:00:00|
+IA|PMSI|-3.500845|118.91494|194.0|Station Majene, Sulawesi, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|POCI|-1.420466|120.657053|12.0|Station Type A, Poso Pesisir,Poso,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|PPBI|-2.161602|106.136531|24.0|Station Pangkal Pinang, Bangka|2007-01-01T00:00:00|
+IA|PPCM|-3.727215|119.726933|58.0|Type MR, Patampanua,Pinrang,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|PPI|-0.455659|100.397186|787.0|Station Padangpanjang, Indonesia|2005-01-01T00:00:00|
+IA|PPJI|-7.704668|112.635241|870.0|Tretes, Jawa, Indonesia|2018-10-22T00:00:00|
+IA|PPLI|-5.740961|105.144931|30.0|Station Type B Punduh Pedada,Pesawaran,Lampung|2019-01-01T00:00:00|
+IA|PPSI|-2.766402|100.009629|11.0|Station Pulau Pagai, Sumatra|2008-01-01T00:00:00|
+IA|PPSM|-5.318142|104.015524|8.0|Type MR, Pesisir Selatan,Pesisir Barat,Lampung|2019-01-01T00:00:00|
+IA|PRJI|-8.072189|110.791799|280.0|Station Type B Pracimantoro,Wonogiri,Jawa Tengah|2019-01-01T00:00:00|
+IA|PSI|2.695293|98.923802|1074.0|Station Rantau Prapat, Sumatra, Indonesia (CTBTO)|2006-01-01T00:00:00|
+IA|PSJCM|-7.059984|120.620258|7.0|Station Type MR, Pasimassungu, Kep. Selayar, Sulawesi Selatan|2020-10-01T00:00:00|
+IA|PSJM|-6.968521|106.549027|179.0|Type MR, Pelabuhan Ratu,Sukabumi,Jawa Barat|2019-01-01T00:00:00|
+IA|PSLI|-5.937379|105.510021|7.0|Station Type B Rajabasa P. Sibesi,Lampung Selatan,Lampung|2019-01-01T00:00:00|
+IA|PSSI|2.735297|125.404451|96.0|Siau, Sulawesi Utara|2018-11-22T00:00:00|
+IA|PSSM|-5.864353|104.695341|6.0|Type MR, Pematang Sawah,Tanggamus,Lampung|2019-01-01T00:00:00|
+IA|PTJI|-6.265501|106.748854|32.0|Station Type B Pondok Aren,Tangerang Selatan,Banten|2019-01-01T00:00:00|
+IA|PTKI|-0.14195|109.40296|36.0|Station Pontianak, Kalimantan, Indonesia (JISNET)|2006-03-03T00:00:00|2019-01-01T00:00:00
+IA|PTSM|2.011846|99.165996|1203.0|Type MR, Pangaribuan,Tapanuli Utara,Sumatera Utara|2019-01-01T00:00:00|
+IA|PWCM|-3.673959|120.400576|16.0|Station Type MR, Pitumpanua, Sulawesi Selatan|2020-01-01T00:00:00|
+IA|PWJI|-8.021912|111.804123|176.0|Station Pagerwojo, Java|2008-01-01T00:00:00|
+IA|RAPI|-0.410107|130.821142|18.0|Station Raja Ampat, Papua|2006-01-01T00:00:00|
+IA|RASM|-2.165474|101.07079|16.0|Type MR, Ranah Ampek Hulu Tapan,Pesisir Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|RBSI|-5.84445|105.742|224.44|Station Rajabasa, Sumatra|2008-01-01T00:00:00|
+IA|RDCM|-1.295442|119.552424|41.0|Type MR, Rio Pakava,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|RGRI|-0.348979|102.33404|13.0|Station Rengat, Sumatra|2007-01-01T00:00:00|
+IA|RITA|-7.163845|110.183745|749.0|Station Type B, Gemawang Temanggung|2021-12-31T00:00:00|
+IA|RKCM|-2.94017|121.580622|378.0|Station Type MR, Rauta, Sulawesi Tenggara|2020-01-01T00:00:00|
+IA|RKPI|-1.510747|134.177291|26.0|Station Ransiki, Papua; Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|RLSI|2.068706|99.855333|17.0|Station Type A, Rantau Selatan,Labuhan Batu,Sumatera Utara|2019-01-01T00:00:00|
+IA|RMSM|-2.623236|102.761768|53.0|Type MR, Rawas Hulu,Musi Rawas,Sumatera Selatan|2019-01-01T00:00:00|
+IA|RNFM|-8.429328|121.026151|52.0|Station Type MR, Riung, Ngada, NTT|2020-10-01T00:00:00|
+IA|RONI|-10.765862|123.073166|112.0|Station Rote China|2019-11-01T00:00:00|
+IA|RPSI|2.0723|99.8325|78.0|Station Rantau Parapat, Sumatra|2008-01-01T00:00:00|2015-02-11T00:00:00
+IA|RRSI|0.842077|100.3397|61.0|Station Type A, Rambah,Rokan Hulu,Riau|2019-01-01T00:00:00|
+IA|RSSM|2.598127|98.783259|1518.0|Type MR, Ronggurnihuta,Samosir,Sumatera Utara|2019-01-01T00:00:00|
+IA|RTBI|-8.459644|114.942002|269.0|Station Rangdo, Negare, Bali, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|SADLY|-6.573772|106.073947|282.0|Station Type A, Gunung Kencana, Banten|2021-06-01T00:00:00|
+IA|SANI|-2.049680843|125.9881547|41.0|GEOFON Station Sanana, Indonesia|2009-11-26T00:00:00|
+IA|SASI|0.12413|99.8754|165.0|Simpang Empat, Sumatra, Indonesia|2018-10-22T00:00:00|
+IA|SASM|4.879503|95.48256|9.0|Type MR, Sampoiniet,Aceh Jaya,Aceh|2019-01-01T00:00:00|
+IA|SAUI|-7.982585|131.299001|30.0|GEOFON Station Saumlaki, Indonesia|2009-06-29T00:00:00|
+IA|SBBM|-8.203088|114.917965|51.0|Station Type MR, Seririt, Bali|2020-10-01T00:00:00|
+IA|SBJI|-6.11113|106.132393|33.0|Station Serang, Indonesia|2006-01-01T00:00:00|
+IA|SBJM|-7.967995|110.266119|17.0|Type MR, Sanden,Bantul,D.I Yogyakarta|2019-01-01T00:00:00|2023-11-30T10:00:00
+IA|SBNI|-10.49171|121.845698|12.0|Sabu, Nusa Tenggara Timur|2017-12-01T00:00:00|
+IA|SBSI|1.398786|99.430896|282.0|Batangonang,PadanglawasUtara  ,SumateraUtara|2007-01-01T00:00:00|
+IA|SBSM|0.198313|99.377479|9.0|Type MR, Sungai Beremas,Pasaman Barat,Sumatera Barat|2019-01-01T00:00:00|
+IA|SCJI|-7.680982|109.168985|12.0|Station Gunung Srandil, Java, BMG, Indonesia|2007-01-01T00:00:00|
+IA|SCJM|-6.843224|107.222674|299.0|Type MR, Sukaluyu,Cianjur,Jawa Barat|2019-01-01T00:00:00|
+IA|SDCI|-0.49414|119.768745|14.0|Station Type A, Sindue,Donggala,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|SDSI|-0.932595|101.427996|176.0|Station Sungai Dareh, Sumatra|2008-01-01T00:00:00|
+IA|SDSM|2.754558|98.295057|1010.0|Type MR, Sidikalang,Dairi,Sumatera Utara|2019-01-01T00:00:00|
+IA|SEJI|-7.005091|111.729107|46.0|Station Type B Senori,Tuban,Jawa Timur|2019-01-01T00:00:00|
+IA|SEJM|-6.8726|108.5852|342.0|Type MR, Sedong,Cirebon,Jawa Barat|2019-01-01T00:00:00|
+IA|SEMI|-2.917045|129.820861|9.0|Station Type A, Kobisadar, Seram Utara Timur Kobi, Maluku Tengah, Maluku|2019-01-01T00:00:00|
+IA|SGKI|0.530205|117.604413|86.0|Station Sangata, Kalimantan, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|SGSI|3.68594|125.52854|10.0|Station Sangihe, BMG|2007-01-01T00:00:00|
+IA|SIJI|-0.869212|131.266012|83.0|Station Sorong, Indonesia (CTBTO AS042)|2010-01-01T00:00:00|
+IA|SIJM|-7.410119|112.760565|9.0|Type MR, Sidoarjo,Sidoarjo,Jawa Timur|2019-01-01T00:00:00|
+IA|SISI|-1.326481|99.089487|19.0|Station Saibi, Sumatra|2008-01-01T00:00:00|
+IA|SISM|4.608187|96.72888|1026.0|Type MR, Silih Nara,Aceh Tengah,Aceh|2019-01-01T00:00:00|
+IA|SJPM|-2.569841|140.502923|86.0|Station, Type MR, Sentani, Jayapura|2020-10-01T00:00:00|
+IA|SKJI|-7.005315|106.562977|63.0|Station Sukabumi, Java|2007-01-01T00:00:00|
+IA|SKPM|-3.448584|140.725642|227.0|Station Type MR, Senggi, Keerom, Papua|2020-10-01T00:00:00|
+IA|SKSI|5.894501|95.312685|12.0|Station Type A, Sukakarya,Kota Sabang,Aceh|2019-01-01T00:00:00|
+IA|SKSM|-1.945983|101.34976|938.0|Type MR, Siulak Mukai,Kerinci,Jambi|2019-01-01T00:00:00|
+IA|SLBFM|-8.796226|115.934078|35.0|Station Type MR, Sekotong Tengah, Nusa Tenggara Barat|2020-11-01T00:00:00|
+IA|SLSI|-2.392417|102.592669|58.0|Station Sarolangun, Jambi Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|SLSM|-0.831354|100.65343|388.0|Type MR, Sungai Lasi,Solok,Sumatera Barat|2019-01-01T00:00:00|
+IA|SMKI|-0.446147786|117.2085259|24.0|Station Samarinda, Kalimantan|2007-01-01T00:00:00|
+IA|SMPI|-1.981004567|138.710482|26.0|Station Sarmi, Irian Jaya|2008-01-01T00:00:00|
+IA|SMRI|-7.04897|110.440801|190.0|GEOFON Station Semarang, Java, Indonesia|2006-11-01T00:00:00|
+IA|SMSI|0.988464|122.36544|12.0|Station Sumalata, BMG, Indonesia|2012-01-01T00:00:00|
+IA|SMSM|-0.005915|100.171094|325.0|Type MR, Simpati,Pasaman,Sumatera Barat|2019-01-01T00:00:00|
+IA|SNBI|0.963168|97.429514|13.0|Station Type A, Sirombu,Nias Barat,Sumatera Utara|2019-01-01T00:00:00|
+IA|SNJI|-7.780798|111.7591|1281.0|Station Sawahan, Indonesia (JISNET)|2006-01-01T00:00:00|
+IA|SNSI|2.408886|96.326691|11.0|Station Sinabang, Aceh, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|SOEI|-9.755276|124.267233|1026.0|GEOFON Station Soe, Indonesia|2008-12-09T00:00:00|
+IA|SPSI|-3.964563|119.7691|62.0|Station Sidrap, Sulawesi|2008-01-01T00:00:00|
+IA|SPSJM|-6.66688|107.613646|645.0|Station Type MR, Serang Panjang, Jawa Barat|2020-11-01T00:00:00|
+IA|SPSM|2.516056|98.373765|998.0|Type MR, Sitellu Tali Urang Julu,Pakpak Bharat,Sumatera Utara|2019-01-01T00:00:00|
+IA|SRBI|-8.084734|115.212662|65.0|Station Singaraja, Bali|2008-01-01T00:00:00|
+IA|SRMI|-2.941421|129.181812|6.0|Station Type A, Olong, Seram Utara, Maluku Tengah, Maluku|2019-01-01T00:00:00|
+IA|SRPI|-1.875485|136.240014|22.0|Station Serui, Papua, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|SRSI|-2.531581|120.877782|34.0|Sorowako, Sulawesi Selatan|2017-12-01T00:00:00|
+IA|SSJM|-6.887174|106.962577|820.0|Type MR, Sukaraja,Sukabumi,Jawa Barat|2019-01-01T00:00:00|
+IA|SSKI|0.817706|108.96997|24.0|Singkawang, Kalimanta|2017-12-01T00:00:00|
+IA|SSMI|-3.736684|130.828782|8.0|Station Type A, Kian Laut, Siritaun Wida Timur, Seram Bagian Timur, Maluku|2019-01-01T00:00:00|
+IA|SSSI|2.674943|97.970772|53.0|Subulussalam, Sumatra, Indonesia|2018-10-22T00:00:00|
+IA|SSSM|-1.56407|101.23747|580.0|Type MR, Sangir,Solok Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|STKI|0.065582|111.477204|33.0|SINTANG, KALIMANTAN BARAT|2024-12-09T16:10:30|
+IA|STPI|-0.468395057|132.12558|28.0|Station Type A, Sausapor,Tambrauw,Papua Barat|2019-01-01T00:00:00|
+IA|STSI|-2.388789|101.047809|8.0|Station Type B Silaut,Pesisir Selatan,Sumatera Barat|2019-01-01T00:00:00|
+IA|SUSM|-5.021361|104.294584|1024.0|Type MR, Sekincau,Lampung Barat,Lampung|2019-01-01T00:00:00|
+IA|SWCM|-4.214631|120.010879|18.0|Type MR, Sabbang Paru,Wajo,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|SWI|-0.862835|131.259183|41.0|Station Sorong, Indonesia|2006-01-01T00:00:00|
+IA|SWJI|-7.73486|111.766874|669.0|Station Sawahan, Java|2007-01-01T00:00:00|
+IA|SWPM|-0.803537|133.59487|83.0|Station Type MR, Sidey, Manokwari, Papua|2020-10-01T00:00:00|
+IA|TAMI|-3.675941|128.110783|103.0|Station Type A, Tawiri, Teluk Ambon, Kota Ambon, Maluku|2019-01-01T00:00:00|
+IA|TARAI|3.3137769|117.5825608|9.0|Station Tarakan, Kalimantan, Indonesia (JISNET)|2000-01-01T00:00:00|
+IA|TASI|-0.299021|100.224403|463.0|Station Type A, Tanjung Raya,Agam,Sumatera Barat|2019-01-01T00:00:00|
+IA|TBCM|-4.91174|120.282393|26.0|Type MR, Tonra,Bone,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|TBJI|-6.817903|111.848149|20.0|Station Tambak Boyo, Java|2008-01-01T00:00:00|
+IA|TBKI|2.135935|117.4241735|18.0|Station Type A, Teluk Bayur,Berau,Kalimantan Timur|2019-01-01T00:00:00|
+IA|TBMCM|0.713939|124.59023|157.0|Station Type MR, Tutuyan, Bolaang Timur, Mongondow, Manado|2020-10-01T00:00:00|
+IA|TDNI|0.579194|97.815972|82.0|Teluk Dalam, Pulau Nias|2017-12-01T00:00:00|
+IA|TGCM|0.520074|123.077937|149.0|Type MR, Telaga,Gorontalo,Gorontalo|2019-01-01T00:00:00|
+IA|TGJI|-6.8679|109.121|43.84|Station Tegal, Java|2007-01-01T00:00:00|2010-04-20T00:00:00
+IA|TKSM|3.137353|98.32443049|747.0|Type MR, Tiganderket,Karo,Sumatera Utara|2019-01-01T00:00:00|
+IA|TLCM|-2.509245|120.7944|56.0|Type MR, Tomoni,Luwu Timur,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|TLE2|-5.699423|132.739779|38.0|Station Tual, Kai, JISNET, Indonesia|2010-01-01T00:00:00|
+IA|TMSI|1.294797|124.9255345|693.0|Station TMSI|2013-01-01T00:00:00|
+IA|TMSM|-2.699633|101.446366|105.0|Type MR, Teramang Jaya,Mukomuko,Bengkulu|2019-01-01T00:00:00|
+IA|TMTMM|-3.29802|129.53044|17.0|Station Type MR, Japutih, Tehoru, Maluku Tengah, Maluku|2020-10-01T00:00:00|
+IA|TNG|-6.1719|106.6469|51.25|Station Tangerang, Indonesia|2006-01-01T00:00:00|
+IA|TNGI|-6.172046|106.646868|11.0|Station Tangerang China|2006-12-01T00:00:00|
+IA|TNTI|0.772115|127.366885|48.0|GEOFON Station Ternate, Indonesia|2007-01-05T00:00:00|
+IA|TOCM|-2.647406|121.408041|343.0|Type MR, Towuti,Luwu Timur,Sulawesi Selatan|2019-01-01T00:00:00|
+IA|TOJI|-6.762248|108.134345|37.0|Station Type B Tomo,Sumedang,Jawa Barat|2019-01-01T00:00:00|
+IA|TOLI2|1.111167|120.781747|34.0|GEOFON Station Tolitoli, Sulawesi, Indonesia|2011-07-14T00:00:00|
+IA|TPCI|0.467448|121.0993264|15.0|Station Type A, Taopa,Parigi Moutong,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|TPI|-2.7568121|107.6526006|31.0|Station Tanjung Pandang, Belitung, Indonesia|2006-12-22T00:00:00|
+IA|TPRI|0.91935|104.520857|27.0|Station Tanjung Pinang, Sumatra|2007-01-01T00:00:00|
+IA|TPSI|5.013716|95.915075|468.0|Station Type A, Tangse,Pidie,Aceh|2019-01-01T00:00:00|
+IA|TPTI|3.26169|97.177373|21.0|Station Tapaktuan China|2006-01-01T00:00:00|
+IA|TRIYO|-2.0601|99.583|41.0|Station Type MR, Sipora Selatan, Kep. Mentawai|2020-10-01T00:00:00|
+IA|TRPI|-6.09882|140.301011|9.0|Tanah Merah, Papua|2019-10-24T00:00:00|
+IA|TRSI|2.025546843|98.95944632|971.0|Station Tarutung, Sumatra|2007-01-01T00:00:00|
+IA|TSI|3.501111|98.56457334|69.0|Station Tuntungan, Indonesia|2006-01-01T00:00:00|
+IA|TSJM|-6.731932|107.810909|407.0|Type MR, Tanjungsiang,Subang,Jawa Barat|2019-01-01T00:00:00|
+IA|TSPI|-1.473098|132.089993|57.0|Station Type A, Teminabuan,Sorong Selatan,Papua Barat|2019-01-01T00:00:00|
+IA|TTSI|-3.04507|119.818971|883.0|Station Tana Toraja, Sulawesi|2008-01-01T00:00:00|
+IA|TTSM|1.085762|99.41087363|186.0|Type MR, Tano Tombangan Angkola,Tapanuli Selatan,Sumatera Utara|2019-01-01T00:00:00|
+IA|TUJI|-8.401824|113.73236|31.0|Station Type B Tumpakrejo,Jember,Jawa Timur|2019-01-01T00:00:00|
+IA|TWSI|-8.738176499|116.8821592|23.0|Station Taliwang, Sumbawa, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|UBSI|-3.761069099|102.2714515|11.0|Station Bengkulu, Sumatra, Indonesia|2006-01-01T00:00:00|
+IA|UGM|-7.912349|110.522048|198.0|GEOFON Station Wanagama, Indonesia|2006-06-29T00:00:00|
+IA|UIDB|-6.349026|106.826647|68.0|UIDB|2020-04-13T00:00:00|
+IA|UKCM|-3.857076|122.043142|34.0|Station Type MR, Unaaha, Sulawesi Tenggara|2020-11-01T00:00:00|
+IA|ULSM|-3.7596|102.798482|263.0|Type MR, Ulu Musi,Empat Lawang,Sumatera Selatan|2019-01-01T00:00:00|
+IA|USFM|-8.411989|117.141153|17.0|Station Type MR, Utan, Nusa Tenggara Barat|2020-11-01T00:00:00|
+IA|USTI|-9.65422|119.787613|448.0|Station Type A, Umbu Ratu Nggay,Sumba Tengah,Nusa Tenggara Timur|2019-01-01T00:00:00|
+IA|UTSI|-5.312576|104.550969|846.0|Station Type B Ulu Belu,Tanggamus,Lampung|2019-01-01T00:00:00|
+IA|UTSM|-4.083457|102.728487|94.0|Type MR, Ulu Talo,Seluma,Bengkulu|2019-01-01T00:00:00|
+IA|UWJI|-6.41911|110.94741|12.0|Station Ujung Watu, Java|2009-01-01T00:00:00|
+IA|WAMI|-4.088584|138.946375|1661.0|Station Wamena, Irian Jaya|2008-09-05T00:00:00|
+IA|WBMI|0.339352|127.8707863|21.0|Station Type A, Weda Barat,Halmahera Tengah,Maluku Utara|2019-01-01T00:00:00|
+IA|WBSI|-9.641153|119.391152|428.0|Station Waikabubak, Sumba, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|WEFM|-8.606988|121.717871|47.0|Station Type MR, Wewaria, Ende, NTT|2020-10-01T00:00:00|
+IA|WFTFM|-8.524774|122.71041|290.0|Staation Type MR, Wulanggitang, Flores Timur, NTT|2020-10-01T00:00:00|
+IA|WGJM|-7.382983|112.509622|26.0|Type MR, Wringianom,Gresik,Jawa Timur|2019-01-01T00:00:00|
+IA|WHMI|1.08216|128.131071|21.0|Station Type A, Wasile,Halmahera Timur,Maluku Utara|2019-01-01T00:00:00|
+IA|WKCM|-3.825947|121.299348|25.0|Station Type MR, Wolo, Sulawesi Tenggara|2020-11-01T00:00:00|
+IA|WLFM|-8.53121|123.450041|14.0|Station Type MR, Wulandoni, Lembata, NTT|2020-10-01T00:00:00|
+IA|WLJI|-6.831074|105.890987|20.0|Station Type B Wonosalam,Lebak,Banten|2019-01-01T00:00:00|
+IA|WLPU|-6.3823|107.3603|33.0|BMG-Net, Indonesia (IA-Net)|2019-10-31T00:00:00|
+IA|WLTFM|-8.518205|116.540739|473.0|Station Type MR, Wanasaba, Nusa Tenggara Barat|2020-11-01T00:00:00|
+IA|WMCM|-2.216149|121.62211|5.0|Type MR, Wita Ponda,Morowali,Sulawesi Tengah|2019-01-01T00:00:00|
+IA|WOJI|-7.837197|110.923594|135.0|Station Wonogiri, Java, Indonesia (BMKG)|2009-01-01T00:00:00|
+IA|WRJI|-7.811277|113.745649|461.0|Station Type B Curahdami,Bondowoso,Jawa Timur|2019-01-01T00:00:00|
+IA|WSI|-9.669046273|120.2975664|7.0|Station Waingapu, JISNET Indonesia|2005-01-01T00:00:00|
+IA|WSJM|-6.974837|106.724853|282.0|Type MR, Warungkiara,Sukabumi,Jawa Barat|2019-01-01T00:00:00|
+IA|WSTMM|-3.453046|129.9951|12.0|Station Type MR, Werinama, Werinama, Seram Bagian Timur, Maluku|2020-11-01T00:00:00|
+IA|WUPCM|-3.006292|120.192781|15.0|Station Type MR, Wara Utara, Sulawesi Selatan|2020-11-01T00:00:00|
+IA|WWCI|-5.272678|123.52501|30.0|Station Type A, Wangi-wangi,Wakatobi,Sulawesi Tenggara|2019-01-01T00:00:00|
+IA|WWPI|-2.244742|136.375899|6.0|Station Type A, Waropen Bawah,Waropen,Papua|2019-01-01T00:00:00|
+IA|YOGI|-7.816602|110.294929|132.0|Station Yogyakarta China|2007-12-01T00:00:00|
+|CIKJI|-6.0419|107.3474||||
+|CILJI|-6.8220|106.3160||||
+|CSBJI|-6.4047|107.8817||||
+|PASJI|-6.2120|105.9835||||
+|R02C2|-6.8253|107.7041||||
+|R34E2|-6.8787|107.6642||||
+|R5F0D|-6.8360|107.5925||||
+|R799F|-6.8421|107.5099||||
+|R7D14|-6.7990|107.5357||||
+|R7D14A|-6.8006|107.5880||||
+|RC355|-6.8304|107.6363||||
+|RC355A|-6.8108|107.6210||||
+|SGRJI|-7.0101|108.0187||||
+|SICJI|-7.4720|108.8080||||
+|TUBJI|-6.1881|107.0503||||

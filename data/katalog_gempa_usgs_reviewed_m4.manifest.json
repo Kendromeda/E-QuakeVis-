@@ -1,0 +1,21 @@
+{
+  "source": "USGS ANSS ComCat (reviewed)",
+  "source_documentation": "https://earthquake.usgs.gov/data/comcat/index.php",
+  "query_endpoint": "https://earthquake.usgs.gov/fdsnws/event/1/query",
+  "downloaded_at_utc": "2026-07-26T06:58:10.850210Z",
+  "filters": {
+    "starttime": "2008-11-01",
+    "endtime": "2026-07-27",
+    "minlatitude": -11,
+    "maxlatitude": 6,
+    "minlongitude": 95,
+    "maxlongitude": 141,
+    "minmagnitude": 4.0,
+    "eventtype": "earthquake",
+    "reviewstatus": "reviewed"
+  },
+  "row_count": 34136,
+  "first_event_utc": "2008-11-01T01:34:26.370000Z",
+  "last_event_utc": "2026-07-25T17:42:59.303000Z",
+  "unique_event_ids": 34136
+}
