@@ -146,6 +146,7 @@ SLAB_DATA_PATH = APP_DIR / "data" / "sum_slab2_dep_contours.in"
 SLAB_INTERVAL_OPTIONS = {"100 km": 100, "200 km": 200, "Semua (20 km)": 20}
 ENRICHMENT_VERSION = "regions-land-sea-v3-province-mask"
 TABLE_PREVIEW_LIMIT = 2_000
+MAP_HEIGHT = 820
 DEFAULT_QUERY_DAYS = 90
 
 st.set_page_config(
@@ -209,9 +210,86 @@ def apply_theme() -> None:
         }
 
         .block-container {
-            padding-top: 0.6rem;
-            padding-bottom: 2rem;
-            max-width: 1500px;
+            /* Sisakan ruang untuk toolbar Streamlit yang melayang di atas. */
+            padding-top: 2.6rem;
+            padding-bottom: 1.2rem;
+            padding-left: 1.4rem;
+            padding-right: 1.4rem;
+            max-width: none;
+        }
+
+        /* Tab bar berperan sebagai navigasi utama, jadi dibuat lebih tegas. */
+        [data-testid="stTabs"] [data-baseweb="tab-list"] {
+            gap: 0.1rem;
+            border-bottom: 1px solid var(--line);
+            background: #ffffff;
+            border-radius: 12px 12px 0 0;
+            padding: 0 0.35rem;
+            margin-bottom: 0.85rem;
+        }
+
+        [data-testid="stTabs"] [data-baseweb="tab"] {
+            padding: 0.6rem 1.05rem;
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        [data-testid="stTabs"] [data-baseweb="tab"]:hover {
+            color: var(--ink);
+        }
+
+        [data-testid="stTabs"] [aria-selected="true"] {
+            color: var(--brand);
+            font-weight: 600;
+        }
+
+        [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+            background: var(--brand);
+            height: 2px;
+        }
+
+        [data-testid="stTabs"] [data-baseweb="tab-border"] {
+            display: none;
+        }
+
+        /* Kartu bento: peta, blok statistik, dan tabel. */
+        [data-testid="stVerticalBlockBorderWrapper"]:has(> div > [data-testid="stVerticalBlock"]) {
+            background: #ffffff;
+            border-radius: 14px;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06),
+                0 8px 24px rgba(15, 23, 42, 0.05);
+        }
+
+        [data-testid="stSidebar"] [data-testid="stVerticalBlockBorderWrapper"] {
+            box-shadow: none;
+        }
+
+        /* Judul bagian di dalam kartu tidak perlu garis tepi sendiri. */
+        [data-testid="stVerticalBlockBorderWrapper"] .section-heading {
+            margin-top: 0.15rem;
+            font-size: 0.95rem;
+        }
+
+        /* Sidebar: label bagian dibuat kecil dan kapital seperti rancangan. */
+        [data-testid="stSidebar"] h2,
+        [data-testid="stSidebar"] h3 {
+            font-size: 0.74rem !important;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--muted) !important;
+            margin: 1.1rem 0 0.35rem;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stExpander"] details {
+            border-radius: 10px;
+            border-color: var(--line);
+        }
+
+        /* Peta memakai lebar penuh kartunya. */
+        iframe[title="streamlit_folium.st_folium"] {
+            width: 100% !important;
+            border-radius: 12px;
         }
 
         [data-testid="stSidebar"] {
@@ -222,17 +300,17 @@ def apply_theme() -> None:
         [data-testid="stMetric"] {
             background: #ffffff;
             border: 1px solid var(--line);
-            border-left: 4px solid var(--brand);
-            border-radius: 10px;
-            padding: 0.85rem 1.05rem;
-            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+            border-radius: 13px;
+            padding: 0.7rem 0.95rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06),
+                0 8px 24px rgba(15, 23, 42, 0.05);
         }
 
         [data-testid="stMetricLabel"] p {
             color: var(--muted);
-            font-size: 0.82rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
+            font-size: 0.74rem;
+            text-transform: none;
+            letter-spacing: 0.01em;
         }
 
         [data-testid="stMetricValue"] {
@@ -263,23 +341,58 @@ def apply_theme() -> None:
             border-color: var(--brand-dark) !important;
         }
 
+        /* Top bar ramping: identitas di kiri, status data di kanan. */
         .site-header {
-            background: linear-gradient(135deg, #0b5ea8 0%, #0a4f8c 100%);
-            border: none;
-            border-radius: 10px;
-            padding: 1.5rem 1.6rem;
-            margin-bottom: 1.1rem;
-            box-shadow: 0 6px 18px rgba(11, 94, 168, 0.22);
+            background: #ffffff;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 0.6rem 0.95rem;
+            margin-bottom: 0.55rem;
+            display: flex;
+            align-items: center;
+            gap: 0.7rem;
+            box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+        }
+
+        .site-mark {
+            width: 30px;
+            height: 30px;
+            flex: none;
+            border-radius: 9px;
+            background: var(--brand);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .site-header .site-title,
         .site-title {
-            color: #ffffff !important;
-            font-size: 2.15rem;
-            font-weight: 760;
-            line-height: 1.15;
+            color: var(--ink) !important;
+            font-size: 1.12rem;
+            font-weight: 700;
+            line-height: 1.2;
             margin: 0;
-            letter-spacing: -0.01em;
+            letter-spacing: -0.015em;
+        }
+
+        .site-source {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.78rem;
+            color: var(--muted);
+            background: #f1f5f9;
+            border-radius: 8px;
+            padding: 0.32rem 0.7rem;
+        }
+
+        .site-source i {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #15803d;
+            display: inline-block;
         }
 
         .section-heading {
@@ -656,11 +769,23 @@ def clear_hidden_earthquakes() -> None:
     st.session_state.hidden_earthquake_ids = []
 
 
-def render_page_header() -> None:
+BRAND_MARK = (
+    '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" '
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    '<path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>'
+)
+
+
+def render_page_header(source_label: str | None = None) -> None:
+    source_html = (
+        f'<span class="site-source"><i></i>{source_label}</span>' if source_label else ""
+    )
     st.markdown(
-        """
+        f"""
         <div class="site-header">
+            <span class="site-mark">{BRAND_MARK}</span>
             <h1 class="site-title">E-QuakeVis</h1>
+            {source_html}
         </div>
         """,
         unsafe_allow_html=True,
@@ -1649,7 +1774,8 @@ def render_publication_builder(
     if geology_index_units is not None:
         geology_index_units = list(geology_index_units)
     selected_geology_keys = selected_geology_keys or []
-    with st.expander("Buat Peta Publikasi", expanded=False):
+    # Sudah berada di tab sendiri, jadi panel tidak perlu ditutup lagi.
+    with st.expander("Buat Peta Publikasi", expanded=True):
         st.caption(
             "Peta aktif dicapture langsung setelah seluruh filter diterapkan."
         )
@@ -2321,6 +2447,199 @@ def render_publication_builder(
             )
 
 
+def format_depth(value: float | None) -> str:
+    if value is None or pd.isna(value):
+        return "-"
+    return f"{float(value):.0f} km"
+
+
+def count_near_fault(df: pd.DataFrame, radius_km: float = 10.0) -> int:
+    """Count events whose nearest mapped fault trace lies within radius_km."""
+    if "jarak_sesar_km" not in df.columns:
+        return 0
+    distances = pd.to_numeric(df["jarak_sesar_km"], errors="coerce")
+    return int((distances <= radius_km).sum())
+
+
+def render_statistics(filtered_df: pd.DataFrame) -> None:
+    """Statistik tab: ringkasan angka dan empat grafik yang sebelumnya tidak ada."""
+    if filtered_df.empty:
+        st.info(
+            "Belum ada kejadian pada filter saat ini, sehingga statistik tidak "
+            "dapat dihitung. Longgarkan filter di sidebar terlebih dahulu."
+        )
+        return
+
+    stats = calculate_summary_stats(filtered_df)
+    depths = pd.to_numeric(filtered_df["kedalaman"], errors="coerce").dropna()
+    summary_columns = st.columns(4)
+    summary_columns[0].metric("Total kejadian", format_metric(stats["jumlah_gempa"]))
+    summary_columns[1].metric(
+        "Rata-rata M", format_metric(stats["magnitudo_rata_rata"])
+    )
+    summary_columns[2].metric("Kedalaman rata-rata", format_depth(depths.mean()))
+    summary_columns[3].metric(
+        "Dangkal (< 60 km)", format_metric(int((depths < 60).sum()))
+    )
+
+    top_row = st.columns(2)
+    with top_row[0].container(border=True):
+        st.markdown(
+            '<div class="section-heading">Distribusi Kedalaman</div>',
+            unsafe_allow_html=True,
+        )
+        if depths.empty:
+            st.caption("Kolom kedalaman tidak memuat angka yang dapat dihitung.")
+        else:
+            bin_width = 25
+            upper = int(np.ceil(max(depths.max(), bin_width) / bin_width) * bin_width)
+            edges = np.arange(0, upper + bin_width, bin_width)
+            counts, _ = np.histogram(depths, bins=edges)
+            # Numeric index: string labels would be ordered alphabetically by the chart.
+            depth_histogram = pd.DataFrame(
+                {"Kedalaman (km)": edges[:-1].astype(int), "Kejadian": counts}
+            ).set_index("Kedalaman (km)")
+            st.bar_chart(depth_histogram, color="#0b5ea8", height=260)
+            st.caption(
+                f"Lebar bin {bin_width} km; sumbu mendatar menunjukkan batas bawah bin."
+            )
+
+    with top_row[1].container(border=True):
+        st.markdown(
+            '<div class="section-heading">Magnitudo terhadap Kedalaman</div>',
+            unsafe_allow_html=True,
+        )
+        scatter_df = (
+            filtered_df[["magnitudo", "kedalaman"]]
+            .dropna()
+            .rename(columns={"magnitudo": "Magnitudo", "kedalaman": "Kedalaman (km)"})
+        )
+        if scatter_df.empty:
+            st.caption("Tidak ada pasangan magnitudo-kedalaman yang lengkap.")
+        else:
+            st.scatter_chart(
+                scatter_df,
+                x="Magnitudo",
+                y="Kedalaman (km)",
+                color="#0ea5e9",
+                height=260,
+            )
+            st.caption(
+                f"{len(scatter_df):,} titik.".replace(",", ".")
+                + " Sumbu tegak adalah kedalaman hiposenter."
+            )
+
+    bottom_row = st.columns(2)
+    with bottom_row[0].container(border=True):
+        st.markdown(
+            '<div class="section-heading">Provinsi Terbanyak</div>',
+            unsafe_allow_html=True,
+        )
+        province_counts = (
+            filtered_df["provinsi"].fillna("Tidak diketahui").value_counts().head(10)
+        )
+        province_table = province_counts.rename_axis("Provinsi").reset_index(
+            name="Kejadian"
+        )
+        st.dataframe(
+            province_table,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Kejadian": st.column_config.ProgressColumn(
+                    "Kejadian",
+                    format="%d",
+                    min_value=0,
+                    max_value=int(province_counts.max()),
+                )
+            },
+        )
+
+    with bottom_row[1].container(border=True):
+        st.markdown(
+            '<div class="section-heading">Magnitudo Terbesar</div>',
+            unsafe_allow_html=True,
+        )
+        largest = filtered_df.nlargest(10, "magnitudo")[
+            ["waktu", "magnitudo", "kedalaman", "provinsi", "kabupaten_kota"]
+        ].copy()
+        largest["waktu"] = largest["waktu"].dt.strftime("%d %b %Y %H:%M")
+        largest = largest.rename(
+            columns={
+                "waktu": "Waktu",
+                "magnitudo": "M",
+                "kedalaman": "Dalam km",
+                "provinsi": "Provinsi",
+                "kabupaten_kota": "Kabupaten/Kota",
+            }
+        )
+        st.dataframe(largest, width="stretch", hide_index=True)
+
+
+def render_event_table(filtered_df: pd.DataFrame) -> None:
+    """Data Kejadian tab: tabel hasil filter beserta unduhan CSV."""
+    if filtered_df.empty:
+        st.info(
+            "Tidak ada kejadian yang cocok dengan filter saat ini, sehingga tabel "
+            "dan unduhan CSV kosong."
+        )
+        return
+
+    if len(filtered_df) > TABLE_PREVIEW_LIMIT:
+        st.caption(
+            f"Menampilkan {TABLE_PREVIEW_LIMIT:,} kejadian terbaru dari "
+            f"{len(filtered_df):,} hasil. Unduhan CSV tetap memuat seluruh data."
+        )
+    display_df = filtered_df.tail(TABLE_PREVIEW_LIMIT).copy()
+    display_df["waktu"] = display_df["waktu"].dt.strftime("%Y-%m-%d %H:%M:%S")
+    display_df = display_df[
+        [
+            "waktu",
+            "lintang",
+            "bujur",
+            "kedalaman",
+            "magnitudo",
+            "provinsi",
+            "kabupaten_kota",
+            "jenis_lokasi",
+            "jarak_darat_km",
+            "sesar",
+            "segmen_sesar",
+            "jarak_sesar_km",
+            "tanggal",
+            "jam",
+        ]
+    ].rename(
+        columns={
+            "waktu": "Waktu",
+            "lintang": "Lat",
+            "bujur": "Lon",
+            "kedalaman": "Dalam km",
+            "magnitudo": "M",
+            "provinsi": "Provinsi",
+            "kabupaten_kota": "Kabupaten/Kota",
+            "jenis_lokasi": "Lokasi",
+            "jarak_darat_km": "Jarak darat km",
+            "sesar": "Jejak sesar terdekat (geometris)",
+            "segmen_sesar": "Segmen",
+            "jarak_sesar_km": "Jarak horizontal episenter-jejak (km)",
+            "tanggal": "Tanggal",
+            "jam": "Jam",
+        }
+    )
+    st.dataframe(display_df, width="stretch", hide_index=True)
+
+    csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+    filename = f"gempa_filter_{date.today():%Y%m%d}.csv"
+    st.download_button(
+        "Unduh CSV",
+        data=csv_data,
+        file_name=filename,
+        mime="text/csv",
+        width="content",
+    )
+
+
 def render_results(
     filtered_df: pd.DataFrame,
     all_earthquakes_df: pd.DataFrame,
@@ -2450,166 +2769,126 @@ def render_results(
         tuple(unit.get("key", "") for unit in geology_units),
     )
 
-    if filtered_df.empty:
-        st.warning(
-            "Tidak ada data gempa yang sedang ditampilkan. Ubah filter atau "
-            "pulihkan data yang disembunyikan secara manual."
-        )
-    else:
-        stats = calculate_summary_stats(filtered_df)
-        metric_columns = st.columns(3)
-        metric_columns[0].metric("Total", format_metric(stats["jumlah_gempa"]))
-        metric_columns[1].metric(
-            "Rata-rata M", format_metric(stats["magnitudo_rata_rata"])
-        )
-        metric_columns[2].metric(
-            "Maks M", format_metric(stats["magnitudo_maksimum"])
-        )
-
-    st.markdown('<div class="section-heading">Peta Sebaran</div>', unsafe_allow_html=True)
-    map_result = st_folium(
-        map_shell,
-        width=None,
-        height=760,
-        returned_objects=["last_object_clicked_tooltip"],
-        feature_group_to_add=earthquake_layer,
-        layer_control=folium.LayerControl(collapsed=True),
-        key=map_component_key,
+    map_tab, statistics_tab, table_tab, publication_tab = st.tabs(
+        ["Peta Sebaran", "Statistik", "Data Kejadian", "Peta Publikasi"]
     )
-    map_action = (map_result or {}).get("last_object_clicked_tooltip")
-    if (
-        isinstance(map_action, str)
-        and map_action.startswith("hide:eq_")
-        and map_action != st.session_state.last_earthquake_map_action
-    ):
-        action_parts = map_action.split(":", 2)
-        event_id = action_parts[1] if len(action_parts) == 3 else None
-        if find_earthquake_by_event_id(all_earthquakes_df, event_id) is not None:
-            st.session_state.last_earthquake_map_action = map_action
-            hidden_ids = set(st.session_state.hidden_earthquake_ids)
-            hidden_ids.add(event_id)
-            st.session_state.hidden_earthquake_ids = sorted(hidden_ids)
-            st.rerun()
-    elif (
-        show_volcanoes
-        and isinstance(map_action, str)
-        and map_action.startswith("Gunung api:")
-    ):
-        volcano_name = map_action.removeprefix("Gunung api:").strip()
+
+    with map_tab:
+        if filtered_df.empty:
+            st.warning(
+                "Tidak ada data gempa yang sedang ditampilkan. Ubah filter atau "
+                "pulihkan data yang disembunyikan secara manual."
+            )
+        else:
+            stats = calculate_summary_stats(filtered_df)
+            metric_columns = st.columns(4)
+            metric_columns[0].metric(
+                "Total kejadian", format_metric(stats["jumlah_gempa"])
+            )
+            metric_columns[1].metric(
+                "Magnitudo maks", format_metric(stats["magnitudo_maksimum"])
+            )
+            metric_columns[2].metric(
+                "Kedalaman median",
+                format_depth(
+                    pd.to_numeric(filtered_df["kedalaman"], errors="coerce").median()
+                ),
+            )
+            metric_columns[3].metric(
+                "Dekat sesar (<= 10 km)", format_metric(count_near_fault(filtered_df))
+            )
+
+        map_card = st.container(border=True)
+        with map_card:
+            map_result = st_folium(
+                map_shell,
+                width=None,
+                height=MAP_HEIGHT,
+                returned_objects=["last_object_clicked_tooltip"],
+                feature_group_to_add=earthquake_layer,
+                layer_control=folium.LayerControl(collapsed=True),
+                key=map_component_key,
+            )
+        map_action = (map_result or {}).get("last_object_clicked_tooltip")
         if (
-            volcano_name in get_volcano_names(volcano_geojson)
-            and selected_volcano_names != [volcano_name]
+            isinstance(map_action, str)
+            and map_action.startswith("hide:eq_")
+            and map_action != st.session_state.last_earthquake_map_action
         ):
-            st.session_state["_pending_volcano_selection"] = volcano_name
-            st.rerun()
+            action_parts = map_action.split(":", 2)
+            event_id = action_parts[1] if len(action_parts) == 3 else None
+            if find_earthquake_by_event_id(all_earthquakes_df, event_id) is not None:
+                st.session_state.last_earthquake_map_action = map_action
+                hidden_ids = set(st.session_state.hidden_earthquake_ids)
+                hidden_ids.add(event_id)
+                st.session_state.hidden_earthquake_ids = sorted(hidden_ids)
+                st.rerun()
+        elif (
+            show_volcanoes
+            and isinstance(map_action, str)
+            and map_action.startswith("Gunung api:")
+        ):
+            volcano_name = map_action.removeprefix("Gunung api:").strip()
+            if (
+                volcano_name in get_volcano_names(volcano_geojson)
+                and selected_volcano_names != [volcano_name]
+            ):
+                st.session_state["_pending_volcano_selection"] = volcano_name
+                st.rerun()
 
-    if filtered_df.empty:
-        st.caption(
-            "Tidak ada titik gempa pada filter saat ini. Anda tetap dapat membuat "
-            "peta wilayah dengan memilih provinsi atau kabupaten/kota pada filter "
-            "di sidebar, lalu buka \"Buat Peta Publikasi\"."
+        if filtered_df.empty:
+            st.caption(
+                "Tidak ada titik gempa pada filter saat ini. Anda tetap dapat membuat "
+                "peta wilayah dengan memilih provinsi atau kabupaten/kota pada filter "
+                "di sidebar, lalu buka tab \"Peta Publikasi\"."
+            )
+        else:
+            st.caption(
+                "Sumber: PUSGEN 2024/InaRISK, BPS, BIG/Kebijakan Satu Peta, dan data "
+                "trench lokal. "
+                "Kepadatan memakai ordinary kriging untuk provinsi dan choropleth kecamatan untuk "
+                "kabupaten/kota. Titik laut mengikuti provinsi terdekat (maks. 400 km). "
+                "Jarak sesar dan gunung api adalah jarak permukaan dan tidak menentukan penyebab."
+            )
+
+    with statistics_tab:
+        render_statistics(filtered_df)
+
+    with table_tab:
+        with st.container(border=True):
+            render_event_table(filtered_df)
+
+    with publication_tab:
+        render_publication_builder(
+            filtered_df,
+            fault_geojson,
+            trench_geojson,
+            province_geojson,
+            district_geojson,
+            slab_geojson,
+            population_density_geojson,
+            selected_provinces,
+            selected_districts,
+            visible_fault_indexes,
+            show_basemap,
+            show_faults,
+            show_trenches,
+            show_slabs,
+            show_population_density,
+            show_provinces,
+            show_region_labels,
+            basemap_name,
+            show_shortbread_roads,
+            show_shortbread_rivers,
+            show_shortbread_topography,
+            show_stations,
+            station_records,
+            show_geology,
+            geology_style_mode,
+            geology_units,
+            geology_index_units,
+            selected_geology_keys,
         )
-    else:
-        st.caption(
-        "Sumber: PUSGEN 2024/InaRISK, BPS, BIG/Kebijakan Satu Peta, dan data "
-        "trench lokal. "
-            "Kepadatan memakai ordinary kriging untuk provinsi dan choropleth kecamatan untuk "
-            "kabupaten/kota. Titik laut mengikuti provinsi terdekat (maks. 400 km). "
-            "Jarak sesar dan gunung api adalah jarak permukaan dan tidak menentukan penyebab."
-        )
-
-    render_publication_builder(
-        filtered_df,
-        fault_geojson,
-        trench_geojson,
-        province_geojson,
-        district_geojson,
-        slab_geojson,
-        population_density_geojson,
-        selected_provinces,
-        selected_districts,
-        visible_fault_indexes,
-        show_basemap,
-        show_faults,
-        show_trenches,
-        show_slabs,
-        show_population_density,
-        show_provinces,
-        show_region_labels,
-        basemap_name,
-        show_shortbread_roads,
-        show_shortbread_rivers,
-        show_shortbread_topography,
-        show_stations,
-        station_records,
-        show_geology,
-        geology_style_mode,
-        geology_units,
-        geology_index_units,
-        selected_geology_keys,
-    )
-
-    if filtered_df.empty:
-        st.markdown(
-            f'<div class="app-footer">&copy; 2026 {APP_DISPLAY_NAME}</div>',
-            unsafe_allow_html=True,
-        )
-        return
-
-    st.markdown('<div class="section-heading">Data Kejadian</div>', unsafe_allow_html=True)
-    if len(filtered_df) > TABLE_PREVIEW_LIMIT:
-        st.caption(
-            f"Menampilkan {TABLE_PREVIEW_LIMIT:,} kejadian terbaru dari "
-            f"{len(filtered_df):,} hasil. Unduhan CSV tetap memuat seluruh data."
-        )
-    display_df = filtered_df.tail(TABLE_PREVIEW_LIMIT).copy()
-    display_df["waktu"] = display_df["waktu"].dt.strftime("%Y-%m-%d %H:%M:%S")
-    display_df = display_df[
-        [
-            "waktu",
-            "lintang",
-            "bujur",
-            "kedalaman",
-            "magnitudo",
-            "provinsi",
-            "kabupaten_kota",
-            "jenis_lokasi",
-            "jarak_darat_km",
-            "sesar",
-            "segmen_sesar",
-            "jarak_sesar_km",
-            "tanggal",
-            "jam",
-        ]
-    ].rename(
-        columns={
-            "waktu": "Waktu",
-            "lintang": "Lat",
-            "bujur": "Lon",
-            "kedalaman": "Dalam km",
-            "magnitudo": "M",
-            "provinsi": "Provinsi",
-            "kabupaten_kota": "Kabupaten/Kota",
-            "jenis_lokasi": "Lokasi",
-            "jarak_darat_km": "Jarak darat km",
-            "sesar": "Jejak sesar terdekat (geometris)",
-            "segmen_sesar": "Segmen",
-            "jarak_sesar_km": "Jarak horizontal episenter-jejak (km)",
-            "tanggal": "Tanggal",
-            "jam": "Jam",
-        }
-    )
-    st.dataframe(display_df, width="stretch", hide_index=True)
-
-    csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-    filename = f"gempa_filter_{date.today():%Y%m%d}.csv"
-    st.download_button(
-        "Unduh CSV",
-        data=csv_data,
-        file_name=filename,
-        mime="text/csv",
-        width="content",
-    )
 
     st.markdown(
         f'<div class="app-footer">&copy; 2026 {APP_DISPLAY_NAME}</div>',
@@ -2856,7 +3135,9 @@ def main() -> None:
             slab_geojson,
             interval_km=slab_interval_km,
         )
-    render_page_header()
+    render_page_header(
+        f"gempa_working.sqlite &middot; {len(clean_df):,} baris".replace(",", ".")
+    )
     render_results(
         filtered_df,
         clean_df,
