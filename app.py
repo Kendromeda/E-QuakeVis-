@@ -286,10 +286,27 @@ def apply_theme() -> None:
             border-color: var(--line);
         }
 
-        /* Peta memakai lebar penuh kartunya. */
+        /* Peta memakai lebar penuh kartunya dan tidak boleh melebihi jendela. */
         iframe[title="streamlit_folium.st_folium"] {
             width: 100% !important;
+            max-width: 100% !important;
+            display: block;
             border-radius: 12px;
+        }
+
+        /* Jaring pengaman: tidak ada anak yang boleh melebarkan halaman. */
+        .block-container {
+            max-width: 100% !important;
+        }
+
+        [data-testid="stMain"] {
+            overflow-x: hidden;
+        }
+
+        [data-testid="stVerticalBlockBorderWrapper"],
+        [data-testid="stHorizontalBlock"],
+        [data-testid="stColumn"] {
+            min-width: 0;
         }
 
         [data-testid="stSidebar"] {
@@ -2802,7 +2819,9 @@ def render_results(
         with map_card:
             map_result = st_folium(
                 map_shell,
-                width=None,
+                # Lebar mengikuti kontainer; width tetap akan terkunci pada
+                # ukuran render pertama dan meluber saat jendela lebih sempit.
+                use_container_width=True,
                 height=MAP_HEIGHT,
                 returned_objects=["last_object_clicked_tooltip"],
                 feature_group_to_add=earthquake_layer,
