@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 import hashlib
+import json
 from io import BytesIO
 import math
 from pathlib import Path
@@ -11,6 +12,7 @@ import folium
 import numpy as np
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_folium import st_folium
 
 from utils.data_loader import (
@@ -40,6 +42,7 @@ from utils.earthquake_store import (
     query_earthquakes,
     working_database_signature,
 )
+from utils.hypocenter_3d import build_scene, depth_legend_stops
 from utils.fault_data import (
     FAULT_MAX_OFFSHORE_ASSOCIATION_KM,
     FaultDataError,
@@ -147,6 +150,7 @@ SLAB_INTERVAL_OPTIONS = {"100 km": 100, "200 km": 200, "Semua (20 km)": 20}
 ENRICHMENT_VERSION = "regions-land-sea-v3-province-mask"
 TABLE_PREVIEW_LIMIT = 2_000
 MAP_HEIGHT = 820
+SCENE_CANVAS_HEIGHT = 620
 DEFAULT_QUERY_DAYS = 90
 
 st.set_page_config(
@@ -284,6 +288,34 @@ def apply_theme() -> None:
         [data-testid="stSidebar"] [data-testid="stExpander"] details {
             border-radius: 10px;
             border-color: var(--line);
+        }
+
+        .depth-legend {
+            margin: 0.65rem 0 0.2rem;
+        }
+
+        .depth-legend-title {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 0.35rem;
+        }
+
+        .depth-legend-bar {
+            height: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--line);
+        }
+
+        .depth-legend-scale {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            color: var(--muted);
+            margin-top: 0.2rem;
         }
 
         /* Peta memakai lebar penuh kartunya dan tidak boleh melebihi jendela. */
@@ -2478,6 +2510,375 @@ def count_near_fault(df: pd.DataFrame, radius_km: float = 10.0) -> int:
     return int((distances <= radius_km).sum())
 
 
+SCENE_HTML = """
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; }
+  .wrap { border-radius: 12px; overflow: hidden; background: #f8fafc; }
+  .bar { display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+         padding: 9px 12px; background: #ffffff; border-bottom: 1px solid #dce3ed; }
+  .ctl { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: #31415c; }
+  .ctl input[type=range] { width: 108px; accent-color: #0b5ea8; }
+  .ctl b { font-variant-numeric: tabular-nums; min-width: 40px; color: #0f172a; }
+  .chk { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #31415c;
+         cursor: pointer; user-select: none; }
+  .chk input { accent-color: #0b5ea8; width: 15px; height: 15px; cursor: pointer; }
+  .btn { border: 1px solid #dce3ed; background: #fff; border-radius: 8px; padding: 5px 11px;
+         font-size: 12.5px; color: #31415c; cursor: pointer; }
+  .btn:hover { background: #f1f5f9; }
+  .stage { position: relative; background:
+           radial-gradient(120% 90% at 50% 0%, #ffffff 0%, #eef2f7 75%); }
+  canvas { display: block; width: 100%; cursor: grab; }
+  canvas.drag { cursor: grabbing; }
+  .readout { position: absolute; right: 12px; top: 10px; font-size: 11.5px; color: #5a6b84;
+             background: rgba(255,255,255,.9); border: 1px solid #dce3ed; border-radius: 8px;
+             padding: 5px 9px; font-variant-numeric: tabular-nums; }
+  .tip { position: absolute; pointer-events: none; background: #0f172a; color: #fff;
+         font-size: 11.5px; padding: 5px 8px; border-radius: 6px; opacity: 0; transform: translate(-50%, -140%); }
+  .hint { position: absolute; left: 12px; bottom: 10px; font-size: 11px; color: #7a889e; }
+</style>
+<div class="wrap">
+  <div class="bar">
+    <span class="ctl">Eksagerasi<input id="exag" type="range" min="1" max="10" step="0.5" value="3"><b id="exagV">3&times;</b></span>
+    <span class="ctl">Kemiringan<input id="tilt" type="range" min="0" max="90" step="1" value="35"><b id="tiltV">35&deg;</b></span>
+    <span class="ctl">Rotasi<input id="yaw" type="range" min="-180" max="180" step="1" value="-20"><b id="yawV">-20&deg;</b></span>
+    <label class="chk"><input type="checkbox" id="cBound" checked>Batas wilayah</label>
+    <label class="chk"><input type="checkbox" id="cFault" checked>Sesar</label>
+    <label class="chk"><input type="checkbox" id="cSlab" checked>Palung &amp; slab</label>
+    <label class="chk"><input type="checkbox" id="cVolc" checked>Gunung api</label>
+    <label class="chk"><input type="checkbox" id="cStem" checked>Batang kedalaman</label>
+    <button class="btn" id="reset">Atur ulang</button>
+    <button class="btn" id="side" title="Penampang tegak lurus palung, sudut baca zona Wadati-Benioff">Penampang WBZ</button>
+  </div>
+  <div class="stage">
+    <canvas id="scene"></canvas>
+    <div class="readout" id="readout"></div>
+    <div class="hint">Seret untuk memutar &middot; gulir untuk memperbesar</div>
+    <div class="tip" id="tip"></div>
+  </div>
+</div>
+<script>
+const SCENE = __SCENE__;
+const CANVAS_HEIGHT = __HEIGHT__;
+const cv = document.getElementById('scene');
+const ctx = cv.getContext('2d');
+const tip = document.getElementById('tip');
+const state = { exag: 3, tilt: 35, yaw: -20, zoom: 1, panX: 0, panY: 0 };
+
+function project(x, y, d) {
+  const yaw = state.yaw * Math.PI / 180, tilt = state.tilt * Math.PI / 180;
+  const z = -d * state.exag;                      // km, negative downwards
+  const rx = x * Math.cos(yaw) + y * Math.sin(yaw);
+  const ry = -x * Math.sin(yaw) + y * Math.cos(yaw);
+  return [rx, ry * Math.sin(tilt) + z * Math.cos(tilt), ry * Math.cos(tilt) - z * Math.sin(tilt)];
+}
+
+let fit = { scale: 1, cx: 0, cy: 0 };
+let extent = { minX: 0, minY: 0 };
+function computeFit(w, h, maxDepth) {
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  const consider = (x, y, d) => {
+    const p = project(x, y, d);
+    if (p[0] < minX) minX = p[0];
+    if (p[0] > maxX) maxX = p[0];
+    if (p[1] < minY) minY = p[1];
+    if (p[1] > maxY) maxY = p[1];
+  };
+  const P = SCENE.points;
+  let wx = Infinity, wy = Infinity;
+  for (let i = 0; i < P.x.length; i++) {
+    consider(P.x[i], P.y[i], P.d[i]);
+    if (P.x[i] < wx) wx = P.x[i];
+    if (P.y[i] < wy) wy = P.y[i];
+  }
+  for (const group of [SCENE.boundaries, SCENE.faults, SCENE.slabs, SCENE.trenches]) {
+    for (const line of group) for (const pt of line.p) {
+      consider(pt[0], pt[1], pt[2]);
+      if (pt[0] < wx) wx = pt[0];
+      if (pt[1] < wy) wy = pt[1];
+    }
+  }
+  extent.minX = isFinite(wx) ? wx : -100;
+  extent.minY = isFinite(wy) ? wy : -100;
+  // The depth ruler hangs off the front-left corner; keep it inside the frame.
+  consider(extent.minX - 80, extent.minY - 80, 0);
+  consider(extent.minX - 80, extent.minY - 80, maxDepth);
+  if (!isFinite(minX)) { minX = -100; maxX = 100; minY = -100; maxY = 100; }
+  const pad = 46;
+  const sx = (w - pad * 2) / Math.max(1, maxX - minX);
+  const sy = (h - pad * 2) / Math.max(1, maxY - minY);
+  fit.scale = Math.min(sx, sy) * state.zoom;
+  fit.cx = w / 2 - ((minX + maxX) / 2) * fit.scale + state.panX;
+  fit.cy = h / 2 + ((minY + maxY) / 2) * fit.scale + state.panY;
+}
+const toScreen = (p) => [fit.cx + p[0] * fit.scale, fit.cy - p[1] * fit.scale];
+
+function drawLines(group, width, alpha) {
+  ctx.lineWidth = width;
+  ctx.globalAlpha = alpha;
+  for (const line of group) {
+    ctx.beginPath();
+    ctx.strokeStyle = line.c;
+    for (let i = 0; i < line.p.length; i++) {
+      const s = toScreen(project(line.p[i][0], line.p[i][1], line.p[i][2]));
+      if (i === 0) ctx.moveTo(s[0], s[1]); else ctx.lineTo(s[0], s[1]);
+    }
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawAxis(maxDepth) {
+  // Depth ruler at the left-front corner of the whole volume.
+  const minX = extent.minX - 80, minY = extent.minY - 80;
+  ctx.strokeStyle = '#94a3b8';
+  ctx.fillStyle = '#5a6b84';
+  ctx.lineWidth = 1.2;
+  ctx.font = '11px "Segoe UI", Arial, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.beginPath();
+  const top = toScreen(project(minX, minY, 0));
+  const bottom = toScreen(project(minX, minY, maxDepth));
+  ctx.moveTo(top[0], top[1]); ctx.lineTo(bottom[0], bottom[1]); ctx.stroke();
+  const stepKm = maxDepth > 400 ? 100 : (maxDepth > 150 ? 50 : 25);
+  for (let d = 0; d <= maxDepth + 0.5; d += stepKm) {
+    const s = toScreen(project(minX, minY, d));
+    ctx.beginPath(); ctx.moveTo(s[0], s[1]); ctx.lineTo(s[0] - 7, s[1]); ctx.stroke();
+    ctx.fillText(d === 0 ? '0 km' : String(d), s[0] - 11, s[1] + 4);
+  }
+}
+
+let screenPoints = [];
+function draw() {
+  const w = cv.clientWidth, h = CANVAS_HEIGHT;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+
+  const P = SCENE.points;
+  let maxDepth = 100;
+  for (let i = 0; i < P.d.length; i++) if (P.d[i] > maxDepth) maxDepth = P.d[i];
+  // The ruler must span everything drawn: slab contours reach far below the
+  // deepest event in most filters.
+  if (document.getElementById('cSlab').checked) {
+    for (const line of SCENE.slabs) {
+      const d = line.p.length ? line.p[0][2] : 0;
+      if (d > maxDepth) maxDepth = d;
+    }
+  }
+  maxDepth = Math.ceil(maxDepth / 50) * 50;
+  computeFit(w, h, maxDepth);
+
+  if (document.getElementById('cBound').checked) drawLines(SCENE.boundaries, 1, 0.75);
+  if (document.getElementById('cSlab').checked) {
+    drawLines(SCENE.trenches, 2, 0.85);
+    drawLines(SCENE.slabs, 1.4, 0.85);
+  }
+  if (document.getElementById('cFault').checked) drawLines(SCENE.faults, 1.3, 0.75);
+  drawAxis(maxDepth);
+
+  // Painter's algorithm: far points first so near ones stay legible.
+  const order = [];
+  for (let i = 0; i < P.x.length; i++) {
+    const p = project(P.x[i], P.y[i], P.d[i]);
+    order.push([p[2], i, toScreen(p), p]);
+  }
+  order.sort((a, b) => b[0] - a[0]);
+
+  if (document.getElementById('cStem').checked) {
+    ctx.lineWidth = 1;
+    ctx.globalAlpha = 0.45;
+    for (const [, i, s] of order) {
+      if (!P.s[i]) continue;
+      const top = toScreen(project(P.x[i], P.y[i], 0));
+      ctx.beginPath(); ctx.strokeStyle = P.c[i];
+      ctx.moveTo(top[0], top[1]); ctx.lineTo(s[0], s[1]); ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  screenPoints = [];
+  ctx.globalAlpha = 0.82;
+  for (const [, i, s] of order) {
+    ctx.beginPath();
+    ctx.fillStyle = P.c[i];
+    ctx.arc(s[0], s[1], P.r[i], 0, Math.PI * 2);
+    ctx.fill();
+    screenPoints.push([s[0], s[1], P.r[i], i]);
+  }
+  ctx.globalAlpha = 1;
+
+  if (document.getElementById('cVolc').checked) {
+    ctx.fillStyle = '#f97316';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1;
+    for (const v of SCENE.volcanoes) {
+      const s = toScreen(project(v.x, v.y, 0));
+      ctx.beginPath();
+      ctx.moveTo(s[0], s[1] - 5.5); ctx.lineTo(s[0] + 5, s[1] + 4); ctx.lineTo(s[0] - 5, s[1] + 4);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  document.getElementById('readout').textContent =
+    P.x.length.toLocaleString('id-ID') + ' hiposenter · kedalaman 0-' + maxDepth +
+    ' km · eksagerasi ' + state.exag + '× · kemiringan ' + state.tilt + '° · rotasi ' + state.yaw + '°';
+}
+
+function bindRange(id, key, suffix) {
+  const el = document.getElementById(id), out = document.getElementById(id + 'V');
+  el.addEventListener('input', () => {
+    state[key] = parseFloat(el.value);
+    out.innerHTML = el.value + suffix;
+    draw();
+  });
+}
+bindRange('exag', 'exag', '&times;');
+bindRange('tilt', 'tilt', '&deg;');
+bindRange('yaw', 'yaw', '&deg;');
+for (const id of ['cBound', 'cFault', 'cSlab', 'cVolc', 'cStem']) {
+  document.getElementById(id).addEventListener('change', draw);
+}
+document.getElementById('reset').addEventListener('click', () => {
+  Object.assign(state, { exag: 3, tilt: 35, yaw: -20, zoom: 1, panX: 0, panY: 0 });
+  syncControls(); draw();
+});
+document.getElementById('side').addEventListener('click', () => {
+  // Looking along the arc (yaw 90) turns the scene into a trench-normal
+  // section, the angle the Wadati-Benioff dip is normally read from.
+  Object.assign(state, { tilt: 0, yaw: 90 });
+  syncControls(); draw();
+});
+function syncControls() {
+  exag.value = state.exag; exagV.innerHTML = state.exag + '&times;';
+  tilt.value = state.tilt; tiltV.innerHTML = state.tilt + '&deg;';
+  yaw.value = state.yaw; yawV.innerHTML = state.yaw + '&deg;';
+}
+
+let dragging = false, lastX = 0, lastY = 0;
+cv.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; cv.classList.add('drag'); });
+window.addEventListener('mouseup', () => { dragging = false; cv.classList.remove('drag'); });
+window.addEventListener('mousemove', (e) => {
+  if (!dragging) return;
+  state.yaw = Math.max(-180, Math.min(180, state.yaw + (e.clientX - lastX) * 0.4));
+  state.tilt = Math.max(0, Math.min(90, state.tilt - (e.clientY - lastY) * 0.3));
+  state.yaw = Math.round(state.yaw); state.tilt = Math.round(state.tilt);
+  lastX = e.clientX; lastY = e.clientY;
+  syncControls(); draw();
+});
+cv.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  state.zoom = Math.max(0.4, Math.min(8, state.zoom * (e.deltaY > 0 ? 0.9 : 1.1)));
+  draw();
+}, { passive: false });
+cv.addEventListener('mousemove', (e) => {
+  const rect = cv.getBoundingClientRect();
+  const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+  let hit = null;
+  for (let i = screenPoints.length - 1; i >= 0; i--) {
+    const [sx, sy, r, idx] = screenPoints[i];
+    if ((mx - sx) ** 2 + (my - sy) ** 2 <= (r + 3) ** 2) { hit = idx; break; }
+  }
+  if (hit === null) { tip.style.opacity = 0; return; }
+  tip.textContent = SCENE.points.label[hit];
+  tip.style.left = mx + 'px'; tip.style.top = my + 'px'; tip.style.opacity = 1;
+});
+cv.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+window.addEventListener('resize', draw);
+draw();
+</script>
+"""
+
+
+def render_depth_legend() -> None:
+    stops = depth_legend_stops()
+    gradient = ", ".join(
+        f"{color} {depth / stops[-1][0] * 100:.0f}%" for depth, color in stops
+    )
+    st.markdown(
+        f"""
+        <div class="depth-legend">
+            <span class="depth-legend-title">Kedalaman hiposenter</span>
+            <div class="depth-legend-bar" style="background: linear-gradient(90deg, {gradient});"></div>
+            <div class="depth-legend-scale">
+                <span>0</span><span>30</span><span>70</span><span>150</span>
+                <span>300</span><span>700 km</span>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def render_hypocenter_3d(
+    filtered_df: pd.DataFrame,
+    fault_geojson: dict[str, Any],
+    volcano_geojson: dict[str, Any],
+    trench_geojson: dict[str, Any],
+    slab_geojson: dict[str, Any] | None,
+    province_geojson: dict[str, Any] | None,
+    visible_fault_indexes: list[int] | None,
+    selected_volcano_names: list[str],
+) -> None:
+    """Hiposenter 3D tab: the filtered catalogue plotted at its true depth.
+
+    Rendered by a small canvas scene rather than pydeck: st.pydeck_chart flattens
+    MapView pitch in Streamlit 1.50, which makes a depth view impossible, and it
+    injects an online basemap this offline-first app should not depend on.
+    """
+    if filtered_df.empty:
+        st.info(
+            "Tidak ada kejadian pada filter saat ini, sehingga tidak ada "
+            "hiposenter yang dapat digambar. Longgarkan filter di sidebar."
+        )
+        return
+
+    if slab_geojson is None and SLAB_DATA_PATH.exists():
+        # The sidebar switch only governs the 2D map; the 3D view needs the
+        # contours regardless so its own "Palung & slab" toggle means something.
+        try:
+            slab_geojson = load_slab_reference(
+                str(SLAB_DATA_PATH), SLAB_DATA_PATH.stat().st_mtime_ns
+            )
+        except (SlabDataError, OSError):
+            slab_geojson = None
+
+    scene = build_scene(
+        filtered_df,
+        fault_geojson=fault_geojson,
+        volcano_geojson=volcano_geojson,
+        slab_geojson=slab_geojson,
+        trench_geojson=trench_geojson,
+        boundary_geojson=province_geojson,
+        fault_indexes=visible_fault_indexes,
+        volcano_names=(selected_volcano_names or None),
+    )
+    if not scene["points"]["x"]:
+        st.warning(
+            "Kejadian pada filter ini tidak memiliki koordinat dan kedalaman "
+            "yang lengkap, sehingga tidak dapat ditempatkan pada ruang 3D."
+        )
+        return
+
+    html = SCENE_HTML.replace("__SCENE__", json.dumps(scene)).replace(
+        "__HEIGHT__", str(SCENE_CANVAS_HEIGHT)
+    )
+    components.html(html, height=SCENE_CANVAS_HEIGHT + 96, scrolling=False)
+
+    render_depth_legend()
+    st.caption(
+        f"{len(scene['points']['x']):,} hiposenter mengikuti filter aktif, "
+        "digambar pada kedalaman aslinya.".replace(",", ".")
+        + " Kontur slab memakai skala warna yang sama dengan titik gempa, sehingga "
+        "titik yang warnanya menyatu dengan kontur di bawahnya menandai seismisitas "
+        "yang mengikuti bidang slab, yaitu zona Wadati-Benioff. Sesar, palung, dan "
+        "gunung api digambar pada kedalaman 0. Tekan \"Penampang WBZ\" untuk "
+        "melihatnya sebagai penampang tegak lurus palung."
+    )
+
+
 def render_statistics(filtered_df: pd.DataFrame) -> None:
     """Statistik tab: ringkasan angka dan empat grafik yang sebelumnya tidak ada."""
     if filtered_df.empty:
@@ -2786,8 +3187,14 @@ def render_results(
         tuple(unit.get("key", "") for unit in geology_units),
     )
 
-    map_tab, statistics_tab, table_tab, publication_tab = st.tabs(
-        ["Peta Sebaran", "Statistik", "Data Kejadian", "Peta Publikasi"]
+    map_tab, space_tab, statistics_tab, table_tab, publication_tab = st.tabs(
+        [
+            "Peta Sebaran",
+            "Hiposenter 3D",
+            "Statistik",
+            "Data Kejadian",
+            "Peta Publikasi",
+        ]
     )
 
     with map_tab:
@@ -2868,6 +3275,19 @@ def render_results(
                 "Kepadatan memakai ordinary kriging untuk provinsi dan choropleth kecamatan untuk "
                 "kabupaten/kota. Titik laut mengikuti provinsi terdekat (maks. 400 km). "
                 "Jarak sesar dan gunung api adalah jarak permukaan dan tidak menentukan penyebab."
+            )
+
+    with space_tab:
+        with st.container(border=True):
+            render_hypocenter_3d(
+                filtered_df,
+                fault_geojson,
+                volcano_geojson,
+                trench_geojson,
+                slab_geojson,
+                province_geojson,
+                visible_fault_indexes,
+                selected_volcano_names,
             )
 
     with statistics_tab:
