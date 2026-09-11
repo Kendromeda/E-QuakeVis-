@@ -295,6 +295,58 @@ def build_volcano_points(
     return points
 
 
+def scene_bbox(
+    hypocenters: pd.DataFrame,
+    padding_ratio: float = 0.12,
+    min_padding_deg: float = 0.35,
+) -> tuple[float, float, float, float]:
+    """Bounding box of the plotted events as (lon_min, lat_min, lon_max, lat_max).
+
+    The margin keeps the surrounding coastline and fault traces visible without
+    letting the rest of the archipelago shrink the events to a speck.
+    """
+    if hypocenters.empty:
+        return 94.0, -11.5, 141.5, 6.5
+    lon_min = float(hypocenters["lon"].min())
+    lon_max = float(hypocenters["lon"].max())
+    lat_min = float(hypocenters["lat"].min())
+    lat_max = float(hypocenters["lat"].max())
+    span = max(lon_max - lon_min, lat_max - lat_min)
+    padding = max(span * float(padding_ratio), float(min_padding_deg))
+    return (
+        lon_min - padding,
+        lat_min - padding,
+        lon_max + padding,
+        lat_max + padding,
+    )
+
+
+def _clip_paths_to_bbox(
+    paths: Sequence[dict[str, Any]],
+    bbox: tuple[float, float, float, float],
+) -> list[dict[str, Any]]:
+    """Keep only the runs of a path that fall inside the box.
+
+    A polyline leaving and re-entering the box becomes several shorter
+    polylines; runs of a single vertex are dropped because they cannot be drawn.
+    """
+    lon_min, lat_min, lon_max, lat_max = bbox
+    clipped: list[dict[str, Any]] = []
+    for entry in paths:
+        run: list[list[float]] = []
+        for point in entry["path"]:
+            inside = lon_min <= point[0] <= lon_max and lat_min <= point[1] <= lat_max
+            if inside:
+                run.append(point)
+                continue
+            if len(run) >= 2:
+                clipped.append({**entry, "path": run})
+            run = []
+        if len(run) >= 2:
+            clipped.append({**entry, "path": run})
+    return clipped
+
+
 def scene_center(hypocenters: pd.DataFrame) -> tuple[float, float]:
     """Return the (longitude, latitude) the scene is projected around."""
     if hypocenters.empty:
@@ -338,6 +390,7 @@ def build_scene(
     """
     hypocenters = build_hypocenters(filtered_df)
     center_longitude, center_latitude = scene_center(hypocenters)
+    bbox = scene_bbox(hypocenters)
 
     east_values: list[float] = []
     north_values: list[float] = []
@@ -348,14 +401,33 @@ def build_scene(
         east_values.append(round(east, 1))
         north_values.append(round(north, 1))
 
+    # Slab contours run to 700 km everywhere; drawing all of them would stretch
+    # the vertical axis far past a shallow filter. The renderer can still reveal
+    # the deeper ones on request.
+    depth_limit = 150.0
+    if not hypocenters.empty:
+        deepest = float(pd.to_numeric(hypocenters["depth_km"], errors="coerce").max())
+        depth_limit = max(150.0, math.ceil(deepest * 1.3 / 50.0) * 50.0)
+    depth_limit = min(depth_limit, MAX_DEPTH_KM)
+
     magnitudes = pd.to_numeric(hypocenters.get("magnitude"), errors="coerce")
     stem_flags = [
         bool(value >= float(stem_min_magnitude)) if value == value else False
         for value in (magnitudes if len(hypocenters) else [])
     ]
 
+    corners = [
+        project_km(bbox[0], bbox[1], center_longitude, center_latitude),
+        project_km(bbox[2], bbox[3], center_longitude, center_latitude),
+    ]
     scene: dict[str, Any] = {
         "center": [round(center_longitude, 4), round(center_latitude, 4)],
+        "bbox": [round(value, 4) for value in bbox],
+        "box": {
+            "x": [round(corners[0][0], 1), round(corners[1][0], 1)],
+            "y": [round(corners[0][1], 1), round(corners[1][1], 1)],
+        },
+        "depthLimit": depth_limit,
         "maxDepth": MAX_DEPTH_KM,
         "points": {
             "x": east_values,
@@ -373,32 +445,40 @@ def build_scene(
         "volcanoes": [],
     }
 
+    # Every reference layer is cut to the same box as the events, and drawn at
+    # full resolution because the box is small enough to afford it.
     if boundary_geojson:
         scene["boundaries"] = _project_paths(
-            build_boundary_paths(boundary_geojson, step=4),
+            _clip_paths_to_bbox(build_boundary_paths(boundary_geojson, step=2), bbox),
             center_longitude,
             center_latitude,
         )
     if fault_geojson:
         scene["faults"] = _project_paths(
-            build_fault_paths(fault_geojson, fault_indexes, step=2),
+            _clip_paths_to_bbox(
+                build_fault_paths(fault_geojson, fault_indexes, step=1), bbox
+            ),
             center_longitude,
             center_latitude,
         )
     if slab_geojson:
         scene["slabs"] = _project_paths(
-            build_slab_paths(slab_geojson, step=2),
+            _clip_paths_to_bbox(build_slab_paths(slab_geojson, step=1), bbox),
             center_longitude,
             center_latitude,
         )
     if trench_geojson:
         scene["trenches"] = _project_paths(
-            build_trench_paths(trench_geojson, step=2),
+            _clip_paths_to_bbox(build_trench_paths(trench_geojson, step=1), bbox),
             center_longitude,
             center_latitude,
         )
     if volcano_geojson:
         for point in build_volcano_points(volcano_geojson, volcano_names):
+            if not bbox[0] <= point["lon"] <= bbox[2]:
+                continue
+            if not bbox[1] <= point["lat"] <= bbox[3]:
+                continue
             east, north = project_km(
                 point["lon"], point["lat"], center_longitude, center_latitude
             )

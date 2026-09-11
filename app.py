@@ -2548,6 +2548,7 @@ SCENE_HTML = """
     <label class="chk"><input type="checkbox" id="cSlab" checked>Palung &amp; slab</label>
     <label class="chk"><input type="checkbox" id="cVolc" checked>Gunung api</label>
     <label class="chk"><input type="checkbox" id="cStem" checked>Batang kedalaman</label>
+    <label class="chk"><input type="checkbox" id="cDeep">Slab penuh 700 km</label>
     <button class="btn" id="reset">Atur ulang</button>
     <button class="btn" id="side" title="Penampang tegak lurus palung, sudut baca zona Wadati-Benioff">Penampang WBZ</button>
   </div>
@@ -2560,7 +2561,6 @@ SCENE_HTML = """
 </div>
 <script>
 const SCENE = __SCENE__;
-const CANVAS_HEIGHT = __HEIGHT__;
 const cv = document.getElementById('scene');
 const ctx = cv.getContext('2d');
 const tip = document.getElementById('tip');
@@ -2576,6 +2576,11 @@ function project(x, y, d) {
 
 let fit = { scale: 1, cx: 0, cy: 0 };
 let extent = { minX: 0, minY: 0 };
+function rulerOffset() {
+  const bx = SCENE.box.x, by = SCENE.box.y;
+  const span = Math.max(Math.abs(bx[1] - bx[0]), Math.abs(by[1] - by[0]));
+  return Math.max(15, span * 0.07);
+}
 function computeFit(w, h, maxDepth) {
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   const consider = (x, y, d) => {
@@ -2585,25 +2590,15 @@ function computeFit(w, h, maxDepth) {
     if (p[1] < minY) minY = p[1];
     if (p[1] > maxY) maxY = p[1];
   };
-  const P = SCENE.points;
-  let wx = Infinity, wy = Infinity;
-  for (let i = 0; i < P.x.length; i++) {
-    consider(P.x[i], P.y[i], P.d[i]);
-    if (P.x[i] < wx) wx = P.x[i];
-    if (P.y[i] < wy) wy = P.y[i];
-  }
-  for (const group of [SCENE.boundaries, SCENE.faults, SCENE.slabs, SCENE.trenches]) {
-    for (const line of group) for (const pt of line.p) {
-      consider(pt[0], pt[1], pt[2]);
-      if (pt[0] < wx) wx = pt[0];
-      if (pt[1] < wy) wy = pt[1];
-    }
-  }
-  extent.minX = isFinite(wx) ? wx : -100;
-  extent.minY = isFinite(wy) ? wy : -100;
+  // Frame the box the filter defines, not whatever geometry happens to exist.
+  const bx = SCENE.box.x, by = SCENE.box.y;
+  for (const x of bx) for (const y of by) { consider(x, y, 0); consider(x, y, maxDepth); }
+  extent.minX = Math.min(bx[0], bx[1]);
+  extent.minY = Math.min(by[0], by[1]);
   // The depth ruler hangs off the front-left corner; keep it inside the frame.
-  consider(extent.minX - 80, extent.minY - 80, 0);
-  consider(extent.minX - 80, extent.minY - 80, maxDepth);
+  const ruler = rulerOffset();
+  consider(extent.minX - ruler, extent.minY - ruler, 0);
+  consider(extent.minX - ruler, extent.minY - ruler, maxDepth);
   if (!isFinite(minX)) { minX = -100; maxX = 100; minY = -100; maxY = 100; }
   const pad = 46;
   const sx = (w - pad * 2) / Math.max(1, maxX - minX);
@@ -2613,6 +2608,12 @@ function computeFit(w, h, maxDepth) {
   fit.cy = h / 2 + ((minY + maxY) / 2) * fit.scale + state.panY;
 }
 const toScreen = (p) => [fit.cx + p[0] * fit.scale, fit.cy - p[1] * fit.scale];
+
+function visibleSlabs() {
+  if (document.getElementById('cDeep').checked) return SCENE.slabs;
+  const limit = SCENE.depthLimit;
+  return SCENE.slabs.filter((line) => !line.p.length || line.p[0][2] <= limit);
+}
 
 function drawLines(group, width, alpha) {
   ctx.lineWidth = width;
@@ -2630,8 +2631,9 @@ function drawLines(group, width, alpha) {
 }
 
 function drawAxis(maxDepth) {
-  // Depth ruler at the left-front corner of the whole volume.
-  const minX = extent.minX - 80, minY = extent.minY - 80;
+  // Depth ruler just outside the front-left corner of the data box.
+  const offset = rulerOffset();
+  const minX = extent.minX - offset, minY = extent.minY - offset;
   ctx.strokeStyle = '#94a3b8';
   ctx.fillStyle = '#5a6b84';
   ctx.lineWidth = 1.2;
@@ -2651,7 +2653,10 @@ function drawAxis(maxDepth) {
 
 let screenPoints = [];
 function draw() {
-  const w = cv.clientWidth, h = CANVAS_HEIGHT;
+  // The toolbar wraps on narrow windows, so take whatever height is left.
+  const bar = document.querySelector('.bar');
+  const w = cv.clientWidth;
+  const h = Math.max(260, window.innerHeight - (bar ? bar.offsetHeight : 0) - 8);
   const dpr = window.devicePixelRatio || 1;
   cv.width = w * dpr; cv.height = h * dpr; cv.style.height = h + 'px';
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -2663,7 +2668,7 @@ function draw() {
   // The ruler must span everything drawn: slab contours reach far below the
   // deepest event in most filters.
   if (document.getElementById('cSlab').checked) {
-    for (const line of SCENE.slabs) {
+    for (const line of visibleSlabs()) {
       const d = line.p.length ? line.p[0][2] : 0;
       if (d > maxDepth) maxDepth = d;
     }
@@ -2674,7 +2679,7 @@ function draw() {
   if (document.getElementById('cBound').checked) drawLines(SCENE.boundaries, 1, 0.75);
   if (document.getElementById('cSlab').checked) {
     drawLines(SCENE.trenches, 2, 0.85);
-    drawLines(SCENE.slabs, 1.4, 0.85);
+    drawLines(visibleSlabs(), 1.4, 0.85);
   }
   if (document.getElementById('cFault').checked) drawLines(SCENE.faults, 1.3, 0.75);
   drawAxis(maxDepth);
@@ -2738,7 +2743,7 @@ function bindRange(id, key, suffix) {
 bindRange('exag', 'exag', '&times;');
 bindRange('tilt', 'tilt', '&deg;');
 bindRange('yaw', 'yaw', '&deg;');
-for (const id of ['cBound', 'cFault', 'cSlab', 'cVolc', 'cStem']) {
+for (const id of ['cBound', 'cFault', 'cSlab', 'cVolc', 'cStem', 'cDeep']) {
   document.getElementById(id).addEventListener('change', draw);
 }
 document.getElementById('reset').addEventListener('click', () => {
@@ -2756,6 +2761,25 @@ function syncControls() {
   tilt.value = state.tilt; tiltV.innerHTML = state.tilt + '&deg;';
   yaw.value = state.yaw; yawV.innerHTML = state.yaw + '&deg;';
 }
+
+// Start at an exaggeration that makes the depth extent comparable to the box
+// width, so the scene fills the frame instead of sitting as a thin ribbon.
+(function suggestExaggeration() {
+  const P = SCENE.points;
+  let deepest = 100;
+  for (const d of P.d) if (d > deepest) deepest = d;
+  for (const line of SCENE.slabs) {
+    const d = line.p.length ? line.p[0][2] : 0;
+    if (d <= SCENE.depthLimit && d > deepest) deepest = d;
+  }
+  const bx = SCENE.box.x, by = SCENE.box.y;
+  const span = Math.max(Math.abs(bx[1] - bx[0]), Math.abs(by[1] - by[0]));
+  // Aim for a depth extent of roughly 0.8x the box width: enough relief to read
+  // the dip, without the scene turning into a tall ribbon.
+  const suggested = Math.round((span * 0.8 / Math.max(deepest, 1)) * 2) / 2;
+  state.exag = Math.max(1.5, Math.min(8, suggested));
+  syncControls();
+})();
 
 let dragging = false, lastX = 0, lastY = 0;
 cv.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; cv.classList.add('drag'); });
@@ -2862,9 +2886,7 @@ def render_hypocenter_3d(
         )
         return
 
-    html = SCENE_HTML.replace("__SCENE__", json.dumps(scene)).replace(
-        "__HEIGHT__", str(SCENE_CANVAS_HEIGHT)
-    )
+    html = SCENE_HTML.replace("__SCENE__", json.dumps(scene))
     components.html(html, height=SCENE_CANVAS_HEIGHT + 96, scrolling=False)
 
     render_depth_legend()

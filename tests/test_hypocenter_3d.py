@@ -7,6 +7,8 @@ import pytest
 
 from utils.hypocenter_3d import (
     DEPTH_STOPS,
+    _clip_paths_to_bbox,
+    scene_bbox,
     MAX_DEPTH_KM,
     build_boundary_paths,
     build_fault_paths,
@@ -239,12 +241,14 @@ def test_scene_center_falls_back_when_there_is_nothing_to_show():
 def test_build_scene_projects_every_layer_into_the_same_frame():
     scene = build_scene(
         sample_frame(),
+        # Geometry inside the box the sample events define; anything outside it
+        # is clipped away, which test_build_scene_clips_reference_layers covers.
         fault_geojson={
             "features": [
                 {
                     "geometry": {
                         "type": "LineString",
-                        "coordinates": [[106.0, -6.0], [106.5, -6.4]],
+                        "coordinates": [[107.0, -7.0], [107.4, -7.2]],
                     },
                     "properties": {"nama": "Cimandiri"},
                 }
@@ -255,7 +259,7 @@ def test_build_scene_projects_every_layer_into_the_same_frame():
                 {
                     "geometry": {
                         "type": "LineString",
-                        "coordinates": [[108.0, -9.0], [109.0, -9.2]],
+                        "coordinates": [[108.0, -7.5], [109.0, -7.6]],
                     },
                     "properties": {"depth": 100.0},
                 }
@@ -310,3 +314,105 @@ def test_depth_legend_stops_match_the_ramp():
     assert stops[0][0] == 0.0
     assert stops[-1][0] == MAX_DEPTH_KM
     assert stops[0][1] == depth_color(0.0)
+
+
+def test_scene_bbox_wraps_the_events_with_a_margin():
+    bbox = scene_bbox(build_hypocenters(sample_frame()))
+    lon_min, lat_min, lon_max, lat_max = bbox
+    # The sample spans 106.70-110.20 E and -8.10 to -6.71 N.
+    assert lon_min < 106.70 and lon_max > 110.20
+    assert lat_min < -8.10 and lat_max > -6.71
+    # Margin is proportional to the span, so it stays a modest frame.
+    assert lon_min > 105.0 and lon_max < 112.0
+
+
+def test_scene_bbox_uses_a_floor_margin_for_a_single_event():
+    single = pd.DataFrame(
+        {"lintang": [-6.0], "bujur": [106.0], "kedalaman": [10.0], "magnitudo": [3.0]}
+    )
+    lon_min, lat_min, lon_max, lat_max = scene_bbox(build_hypocenters(single))
+    assert lon_max - lon_min == pytest.approx(0.7, abs=0.01)
+    assert lat_max - lat_min == pytest.approx(0.7, abs=0.01)
+
+
+def test_scene_bbox_falls_back_to_indonesia_when_there_is_nothing_to_frame():
+    assert scene_bbox(build_hypocenters(pd.DataFrame())) == (94.0, -11.5, 141.5, 6.5)
+
+
+def test_clip_paths_splits_a_polyline_that_leaves_and_re_enters_the_box():
+    path = [
+        [1.0, 1.0, 0.0],
+        [2.0, 1.0, 0.0],
+        [9.0, 9.0, 0.0],  # outside
+        [3.0, 1.0, 0.0],
+        [4.0, 1.0, 0.0],
+    ]
+    runs = _clip_paths_to_bbox([{"path": path, "color": "#000000"}], (0.0, 0.0, 5.0, 5.0))
+    assert len(runs) == 2
+    assert [point[0] for point in runs[0]["path"]] == [1.0, 2.0]
+    assert [point[0] for point in runs[1]["path"]] == [3.0, 4.0]
+    assert runs[0]["color"] == "#000000"
+
+
+def test_clip_paths_drops_single_vertex_runs_and_paths_outside_the_box():
+    path = [[1.0, 1.0, 0.0], [9.0, 9.0, 0.0], [2.0, 2.0, 0.0], [9.0, 9.0, 0.0]]
+    assert _clip_paths_to_bbox([{"path": path}], (0.0, 0.0, 5.0, 5.0)) == []
+    outside = [[20.0, 20.0, 0.0], [21.0, 21.0, 0.0]]
+    assert _clip_paths_to_bbox([{"path": outside}], (0.0, 0.0, 5.0, 5.0)) == []
+
+
+def test_build_scene_clips_reference_layers_to_the_event_box():
+    scene = build_scene(
+        sample_frame(),
+        fault_geojson={
+            "features": [
+                {   # inside the box
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[107.0, -7.0], [107.4, -7.2]],
+                    },
+                    "properties": {"nama": "Dekat"},
+                },
+                {   # Sumatra, far outside a Java box
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [[98.0, 2.0], [98.4, 1.6]],
+                    },
+                    "properties": {"nama": "Jauh"},
+                },
+            ]
+        },
+        volcano_geojson={
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [107.6, -6.77]},
+                    "properties": {"NAMA_OBJEK": "Dekat"},
+                },
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [98.0, 2.0]},
+                    "properties": {"NAMA_OBJEK": "Jauh"},
+                },
+            ]
+        },
+    )
+    assert len(scene["faults"]) == 1
+    assert [v["n"] for v in scene["volcanoes"]] == ["Dekat"]
+
+
+def test_build_scene_reports_the_box_and_a_depth_limit_from_the_data():
+    scene = build_scene(sample_frame())
+    assert scene["bbox"][0] < 106.70 and scene["bbox"][2] > 110.20
+    # Box corners are the projected extremes, so the camera can frame them.
+    assert scene["box"]["x"][0] < scene["box"]["x"][1]
+    assert scene["box"]["y"][0] < scene["box"]["y"][1]
+    # Deepest sample event is 620 km, so the limit rounds 620*1.3 up to a 50 km step.
+    assert scene["depthLimit"] == 700.0
+
+
+def test_depth_limit_has_a_floor_for_shallow_filters():
+    shallow = pd.DataFrame(
+        {"lintang": [-6.0], "bujur": [106.0], "kedalaman": [12.0], "magnitudo": [3.0]}
+    )
+    assert build_scene(shallow)["depthLimit"] == 150.0
