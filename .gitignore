@@ -2,10 +2,13 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+.coverage.*
 .agents/
 .claude/
 .codex-tmp/
 .playwright-cli/
+.playwright-mcp/
 .tmp/
 tmp/
 output/

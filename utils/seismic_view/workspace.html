@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Slab2 · Ruang kerja seismisitas</title><style>__STYLE__</style></head>
+<body><main>
+  <header class="masthead"><div><div class="eyebrow">E-QUAKEVIS / SUBSURFACE EXPLORER</div>
+    <h1>Geometri subduksi <span>& seismisitas</span></h1></div><span class="badge">USGS Slab2 · 2018</span></header>
+  <div class="toolbar" aria-label="Kontrol visualisasi">
+    <label title="Semua model Slab2 dalam area tampil digambar di 3D; pilihan ini menentukan model untuk garis aktif.">Model penampang <select id="grid" aria-label="Model slab untuk penampang"></select></label>
+    <div class="divider"></div>
+    <label class="check"><input id="showEvents" type="checkbox" checked> Gempa</label>
+    <label class="check"><input id="showSlab" type="checkbox" checked> Slab2</label>
+    <label class="check"><input id="showReferences" type="checkbox" checked> Referensi</label>
+    <label>Opacity <input id="opacity" type="range" min="0.05" max="1" step="0.05" value="0.45"><output id="opacityValue">45%</output></label>
+    <label>Skala vertikal <select id="exaggeration" aria-label="Skala vertikal"><option value="1">1× · sebenarnya</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option></select></label>
+    <button id="resetView" class="quiet">Reset kamera</button>
+  </div>
+  <div id="error" class="error" role="alert" hidden></div>
+  <section class="workspace">
+    <article class="panel model" id="modelPanel"><div class="panel-head"><div><span class="number">01</span><h2>Model 3D</h2></div><div class="model-actions"><span id="eventCount" class="meta"></span><button id="draw3d" class="quiet">Gambar A–A′ di 3D</button><button id="fullscreen3d" class="quiet" aria-pressed="false">Layar penuh</button></div></div>
+      <div id="draw3dHint" class="draw3d-hint" role="status" hidden></div>
+      <div id="view3d" aria-label="Model hiposenter 3D" tabindex="0"></div>
+      <div class="plot-foot"><span>Seret: rotate · scroll: zoom · Shift + seret: pan · W A S D: pan · Esc: keluar</span><span id="scaleNote">Depth positif ke bawah · 1×</span></div>
+    </article>
+    <aside class="panel profile-tools" id="profilePanel"><div class="panel-head"><div><span class="number">02</span><h2>Garis penampang</h2></div><button id="fullscreenMap" class="quiet" aria-pressed="false">Layar penuh</button></div>
+      <div class="line-tabs" aria-label="Pilih garis slicing"><button type="button" data-line="0" class="active">A–A′</button><button type="button" data-line="1">B–B′</button><button type="button" data-line="2">C–C′</button><button type="button" data-line="3">D–D′</button></div>
+      <div class="map-wrap"><canvas id="profileMap" aria-label="Peta garis slicing, pilih ujung garis aktif untuk menggeser" tabindex="0"></canvas><span class="north">↑ N</span></div>
+      <div class="profile-form">
+        <div class="draw-row"><button id="drawProfile" class="primary">Gambar A–A′</button><button id="reverseProfile" class="quiet" title="Tukar arah profil">Balik arah</button><button id="removeProfile" class="quiet" title="Hapus garis aktif dari peta dan model 3D">Hapus garis</button></div>
+        <p id="drawHint" class="hint" aria-live="polite">Klik Gambar, lalu pilih dua titik pada peta.</p>
+        <form id="coordinates"><div class="coord-head"><span>Titik</span><span>Longitude (°)</span><span>Latitude (°)</span></div>
+          <div class="coord-row"><strong id="startLabel">A</strong><input id="aLon" aria-label="Longitude titik awal" type="number" step="any" min="-180" max="180" required><input id="aLat" aria-label="Latitude titik awal" type="number" step="any" min="-90" max="90" required></div>
+          <div class="coord-row"><strong id="endLabel">A′</strong><input id="bLon" aria-label="Longitude titik akhir" type="number" step="any" min="-180" max="180" required><input id="bLat" aria-label="Latitude titik akhir" type="number" step="any" min="-90" max="90" required></div>
+          <button id="coordinatesSubmit" class="quiet apply" type="submit">Terapkan koordinat</button>
+        </form>
+        <div class="width-row"><label for="widthPreset">Corridor ±</label><select id="widthPreset"><option value="10">10 km</option><option value="25" selected>25 km</option><option value="50">50 km</option><option value="custom">Custom</option></select><input id="width" aria-label="Lebar setengah corridor km" type="number" min="0.1" max="500" step="0.1" value="25"><span>km</span></div>
+        <p class="hint">Lebar dihitung ke setiap sisi garis aktif. Hanya gempa di antara kedua ujung profil yang disertakan.</p>
+      </div>
+    </aside>
+    <article class="panel section-panel"><div class="panel-head"><div><span class="number">03</span><h2 id="sectionTitle">Penampang A–A′</h2></div><div class="section-stats"><span id="profileLength">— km</span><strong id="sliceCount">— gempa dalam slice</strong><span id="corridorLabel">±25 km</span></div></div>
+      <div id="section" aria-label="Penampang gempa dan USGS Slab2"></div>
+      <div class="plot-foot"><span id="profileStatus" role="status">Buat garis A–A′ untuk melihat penampang.</span><button id="exportSlice" class="quiet" disabled>Unduh slice CSV</button></div>
+    </article>
+  </section>
+  <section class="legend-bar" aria-label="Legenda"><div><strong>Depth (km)</strong><div class="depth-ramp"></div><div class="depth-ticks"><span>0</span><span>30</span><span>70</span><span>150</span><span>300</span><span>700+</span></div></div>
+    <div class="mag-legend"><strong>Magnitudo</strong><span><i style="width:12px;height:12px"></i>M 2</span><span><i style="width:18px;height:18px"></i>M 4</span><span><i style="width:24px;height:24px"></i>M 6</span></div>
+    <div class="keys"><span><b class="line-key"></b>Slab2</span><span><b class="slice-key"></b>Corridor</span><span><b class="selected-key"></b>Event dipilih</span></div>
+  </section>
+  <div id="selection" class="selection" aria-live="polite">Pilih titik gempa di model 3D atau penampang untuk melihat detail yang sama pada kedua panel.</div>
+  <footer><div id="source"></div><div>Koordinat geografis WGS 84 · jarak geodesik bola (R = 6.371,0088 km) · proyeksi 3D azimutal ekuidistan. Profil: interpolasi bilinear grid asli, tanpa ekstrapolasi.</div><div>Referensi permukaan pada depth 0 km; DEM/topografi 3D belum tersedia. Sumbu trench ditampilkan sebagai jejak horizontal, bukan kedalaman dasar laut.</div></footer>
+</main><script>__PLOTLY__</script><script>const DATA = __PAYLOAD__;</script><script>__SCRIPTS__</script></body></html>

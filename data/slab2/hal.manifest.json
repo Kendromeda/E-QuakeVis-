@@ -1,0 +1,43 @@
+{
+  "coordinate_reference": "WGS 84 longitude/latitude (EPSG:4326)",
+  "depth_convention": "kilometers positive downward from sea level",
+  "doi": "10.5066/F7PV6JNV",
+  "extent": [
+    120.0,
+    -0.8499999999999996,
+    129.5,
+    10.850000000000001
+  ],
+  "id": "hal",
+  "model_version": "02.23.18",
+  "name": "Halmahera",
+  "output_file": "hal.npz",
+  "output_sha256": "c5ffd8a8b5605a8b074a97ce6dfbd8f4262cd8fadf188e27a76c5e925cfa0a11",
+  "publication_doi": "10.1126/science.aat4723",
+  "publisher": "U.S. Geological Survey",
+  "shape": [
+    235,
+    191
+  ],
+  "snapshot_date": "2026-09-14",
+  "source": "https://raw.githubusercontent.com/DOI-USGS/neic-catalog-separation/aae2e073b361b35fdd19c0bd2d155c1443ed2559/neic_catalog_separation/data/Slab2/hal_slab2_dep_02.23.18.grd",
+  "source_crop_indices": [
+    63,
+    298,
+    80,
+    271
+  ],
+  "source_file": "hal_slab2_dep_02.23.18.grd",
+  "source_repository_commit": "aae2e073b361b35fdd19c0bd2d155c1443ed2559",
+  "source_sha256": "45f4fd9a33e149712f2256b2f63f7facc448ef2f3e24611896cdc2e7ac37b8e3",
+  "source_shape": [
+    361,
+    341
+  ],
+  "spacing_degrees": [
+    0.04999999999999716,
+    0.04999999999999982
+  ],
+  "transformation": "Negate published z to positive-down depth; sort original x/y ascending; remove only exterior all-NaN rows/columns. All valid source nodes, source precision, spacing and internal NaN masks are preserved. No smoothing, triangulation, infill, extrapolation or geometry synthesis.",
+  "valid_nodes": 22485
+}

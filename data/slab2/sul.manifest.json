@@ -1,0 +1,43 @@
+{
+  "coordinate_reference": "WGS 84 longitude/latitude (EPSG:4326)",
+  "depth_convention": "kilometers positive downward from sea level",
+  "doi": "10.5066/F7PV6JNV",
+  "extent": [
+    119.3,
+    -0.6999999999999997,
+    124.55,
+    2.3500000000000005
+  ],
+  "id": "sul",
+  "model_version": "02.23.18",
+  "name": "Sulawesi",
+  "output_file": "sul.npz",
+  "output_sha256": "9ea2ed0aa0ba9ef9df35d5eff622bfa7edbb49413c67c8452b4775988c6db7e4",
+  "publication_doi": "10.1126/science.aat4723",
+  "publisher": "U.S. Geological Survey",
+  "shape": [
+    62,
+    106
+  ],
+  "snapshot_date": "2026-09-14",
+  "source": "https://raw.githubusercontent.com/DOI-USGS/neic-catalog-separation/aae2e073b361b35fdd19c0bd2d155c1443ed2559/neic_catalog_separation/data/Slab2/sul_slab2_dep_02.23.18.grd",
+  "source_crop_indices": [
+    66,
+    128,
+    86,
+    192
+  ],
+  "source_file": "sul_slab2_dep_02.23.18.grd",
+  "source_repository_commit": "aae2e073b361b35fdd19c0bd2d155c1443ed2559",
+  "source_sha256": "178c4f6506e5ccc5b13700384f32e3413d5a07877e215f1ac6a7942f82532513",
+  "source_shape": [
+    221,
+    261
+  ],
+  "spacing_degrees": [
+    0.04999999999999716,
+    0.04999999999999982
+  ],
+  "transformation": "Negate published z to positive-down depth; sort original x/y ascending; remove only exterior all-NaN rows/columns. All valid source nodes, source precision, spacing and internal NaN masks are preserved. No smoothing, triangulation, infill, extrapolation or geometry synthesis.",
+  "valid_nodes": 4539
+}

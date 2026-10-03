@@ -3,7 +3,9 @@
 ## Katalog Gempa dan Database Kerja
 
 - Arsip utama: `gempa_master.csv` (format CSV yang dapat diimpor/diekspor)
-- Arsip sumber BMKG: `katalog_gempa_bmkg_2008_terbaru.csv`
+- Arsip sumber BMKG: `katalog_gempa_bmkg_2008_terbaru.csv`, diunduh dari
+  [BMKG FDSN Event Web Service](https://geof.bmkg.go.id/fdsnws/event/1/)
+  menggunakan `scripts/download_bmkg_earthquake_catalog.py`. Sumber: BMKG.
 - Arsip tervalidasi USGS: `katalog_gempa_usgs_reviewed_m4.csv` (`earthquake`,
   `reviewed`, M>=4; metadata unduhan ada pada berkas `.manifest.json`)
 - Database kerja: `gempa_working.sqlite`
@@ -75,9 +77,117 @@ utama setelah batas KRB tersedia.
 
 Kontur menunjukkan kedalaman bidang subduksi (slab) di bawah permukaan. Nilai
 kedalaman disimpan sebagai kilometer positif pada tiap garis. Region Sunda
-mencakup zona tunjaman Sumatra-Jawa-Bali-Nusa Tenggara. Untuk wilayah Indonesia
-timur (Sulawesi, Halmahera, Papua) tersedia berkas region Slab2 terpisah yang
-dapat ditambahkan dengan pola berkas yang sama.
+mencakup zona tunjaman Sumatra-Jawa-Bali-Nusa Tenggara hingga lengkung Banda.
+
+### Kontur region Indonesia timur
+
+Berkas kontur resmi Slab2 untuk region lain tidak tersedia secara lokal
+(distribusi ScienceBase tidak dapat diunduh otomatis), sehingga kontur ditelusuri
+dari grid Slab2 terverifikasi di `data/slab2/<id>.npz` oleh
+`scripts/build_slab2_contours.py`, interval 20 km, format GMT yang sama:
+
+| Berkas | Region | Garis | Kedalaman | SHA-256 |
+| --- | --- | ---: | --- | --- |
+| `slab2/sul_slab2_dep_contours.in` | Sulawesi Utara | 12 | 20–240 km | `F556899EF58066E3F31F6F487D897F46D998090CD01D3C2343BB13FCA8CF7F26` |
+| `slab2/hal_slab2_dep_contours.in` | Halmahera / Laut Maluku | 57 | 40–660 km | `B3BE3594FBD103DFA454888B1BA95F261BD3A52E11CF46C8F95F7A52C25A630B` |
+| `slab2/png_slab2_dep_contours.in` | Papua (New Guinea) | 13 | 20–160 km | `0BD47C172FD26A1EDD1D7A00AF016131FB76A0FF135AF23FAA238DFE97B04948` |
+| `slab2/phi_slab2_dep_contours.in` | Palung Filipina | 26 | 20–220 km | `F4264592D1E21ACE1A612C07F5AC135A90AAF724AA6E659F21973DC82CE77776` |
+
+- Metode: marching squares pada grid asli 0,05°. Garis hanya melewati sel
+  dengan node valid (sel tepi dengan tiga node valid ditelusuri sebagai
+  segitiga), tanpa smoothing, infill, atau ekstrapolasi ke nodata. Potongan
+  ≤ 3 titik yang hanya memotong sudut tepi mask dibuang.
+- Validasi: metode yang sama pada `sum.npz` menghasilkan 80 segmen seperti berkas
+  resmi Sunda; seluruh 31.785 titik resmi terbentuk ulang (selisih 0,00 km) dan
+  hanya 73 titik tambahan (0,2%) di ujung garis tepi mask, maksimum 5,6 km.
+- Tanggal pembuatan: 2026-09-19. Reproduksi: `python scripts/build_slab2_contours.py`.
+
+## Grid Permukaan 3D Slab2 USGS
+
+Visualisasi 3D dan penampang A–A' menggunakan grid kedalaman asli Slab2,
+bukan permukaan hasil rekonstruksi kontur. Snapshot berada di `data/slab2/`:
+
+| ID | Model | Berkas runtime | Node sumber valid |
+| --- | --- | --- | ---: |
+| `sum` | Sumatra-Java (Sunda) | `sum.npz` | 115.512 |
+| `sul` | Sulawesi | `sul.npz` | 4.539 |
+| `hal` | Halmahera | `hal.npz` | 22.485 |
+| `png` | New Guinea | `png.npz` | 15.347 |
+| `phi` | Philippines | `phi.npz` | 8.425 |
+
+- Sumber resmi: [USGS NEIC catalog separation, direktori Slab2](https://github.com/DOI-USGS/neic-catalog-separation/tree/aae2e073b361b35fdd19c0bd2d155c1443ed2559/neic_catalog_separation/data/Slab2).
+  Mirror ini menyertakan grid publikasi Hayes dkk. (2018); unduhan dipatok pada
+  commit `aae2e073b361b35fdd19c0bd2d155c1443ed2559` dan diverifikasi SHA-256.
+- DOI dataset: [10.5066/F7PV6JNV](https://doi.org/10.5066/F7PV6JNV).
+  DOI publikasi: [10.1126/science.aat4723](https://doi.org/10.1126/science.aat4723).
+- Tanggal snapshot: 2026-09-14. Versi grid `02.23.18` (sum/sul/hal) dan
+  `02.26.18` (png/phi), sesuai nama berkas sumber resmi.
+- Resolusi asli: 0,05° longitude × 0,05° latitude; koordinat WGS 84.
+- `depth[latitude][longitude]` dalam kilometer positif ke bawah dari permukaan
+  laut; nilai z negatif pada sumber hanya dibalik tandanya. Koordinat, presisi
+  node, dan mask NaN asli dipertahankan. NaN dikirim ke browser sebagai `null`.
+- Transformasi menghapus hanya baris/kolom **paling luar yang seluruhnya NaN**.
+  Tidak ada smoothing, infill, interpolasi untuk mengisi mask, atau ekstrapolasi.
+  Model Sunda menjadi 764 × 832 node, longitude 91,55–133,10° dan latitude
+  −11,45–26,70°; sebagian besar bounding box tetap nodata dan bukan cakupan slab.
+- Penampang harus menginterpolasi grid resolusi asli serta memutus garis di
+  nodata. Decimation untuk rendering tidak boleh mengganti grid analisis.
+- Setiap `.manifest.json` mencatat URL, SHA-256 sumber/keluaran, bentuk grid,
+  koordinat, indeks crop, versi, tanggal, dan transformasi. Berkas NetCDF `.grd`
+  asli disertakan untuk audit dan reproduksi offline.
+- Loader `utils/slab_grid.py` hanya membaca snapshot lokal, memvalidasi grid,
+  dan mengembalikan salinan data dari cache immutable. Grid hilang/rusak
+  menimbulkan `SlabGridError`; tidak ada fallback geometri sintetis.
+
+Reproduksi (h5py hanya diperlukan untuk konversi, bukan runtime aplikasi):
+
+```powershell
+python -m pip install h5py
+python scripts/build_slab2_grid.py --source-dir data/slab2
+```
+
+Untuk mengunduh ulang dari mirror resmi yang dipatok commit, jalankan tanpa
+`--source-dir`. Opsi `--models sum sul` membatasi model yang dikonversi.
+SHA-256 sumber harus cocok sebelum konversi dijalankan. Topografi tidak tersedia
+dalam grid kedalaman slab ini; bidang 0 km adalah referensi permukaan laut,
+bukan DEM atau relief topografi.
+
+## Ruang kerja Hiposenter 3D
+
+Tab **Hiposenter 3D** memakai grid asli di atas untuk surface dan penampang.
+Pilihan model **Otomatis** menggunakan grid dengan jumlah sampel profil valid
+terbanyak; pemilihan nama model secara manual mempertahankan model tersebut.
+Klik **Gambar A–A′** pada peta atau **Gambar A–A′ di 3D**, lalu pilih dua titik.
+Pada tampilan 3D, titik yang dipilih diproyeksikan vertikal ke depth 0; bidang
+biru transparan saat menggambar hanya alat pemilihan, bukan slab atau topografi.
+Koordinat tepat dapat diketik pada kolom A/A′. Corridor adalah setengah lebar
+(±km), dengan ujung dibatasi A dan A′. Tombol **Layar penuh** memperbesar model;
+**Esc** atau **Keluar layar penuh** mengembalikan layout. Seret untuk rotate,
+scroll untuk zoom, Shift+seret atau WASD untuk pan. Gempa yang dipilih di salah
+satu grafik ditandai di grafik lainnya. CSV slice memuat jarak sepanjang profil
+dan cross-track bertanda positif di sisi kiri A→A′.
+
+Perhitungan jarak menggunakan geodesik bola dengan radius rata-rata bumi
+6.371,0088 km (aproksimasi koordinat WGS 84, bukan solusi ellipsoid).
+Horizontal 3D menggunakan proyeksi azimutal ekuidistan terpusat pada katalog;
+skala vertikal awal 1× dan exaggeration selalu ditampilkan. Distorsi proyeksi
+tetap meningkat jauh dari pusat; gunakan filter wilayah untuk analisis lokal.
+Depth positif bertambah ke bawah. Profil bilinear disampel maksimum setiap
+2 km dari grid resolusi asli; nodata tidak diekstrapolasi atau disambungkan.
+Surface 3D ditipiskan dengan mask konservatif agar tidak menutup lubang nodata.
+Tidak tersedia DEM numerik lokal, sehingga garis referensi permukaan berada
+pada depth 0 km dan tidak menyatakan elevasi topografi atau bathymetri trench.
+
+Modul: `utils/seismic_workspace.py` memproses katalog dan payload;
+`utils/slab_grid.py` memuat grid; `utils/seismic_view/geometry.js` menangani
+transformasi, corridor, dan interpolasi; `plots.js`, `view3d.js`, `crosssection.js`
+merender grafik; `map.js` menangani peta profil; `controller.js` menyimpan state
+interaksi. Plotly dibundel dari dependensi Python, tanpa CDN atau unduhan runtime.
+Pengaturan profil/layer disimpan pada sessionStorage browser jika diizinkan.
+
+Validasi: `python -m pytest tests -q`; `node --test tests/js/*.test.cjs`.
+Uji interaksi pada aplikasi lokal yang berjalan dapat diulang dengan
+`playwright-cli run-code --filename tests/e2e/seismic_workspace.js`.
 
 ## Palung / Trench Indonesia (Slab2 USGS)
 
@@ -91,7 +201,7 @@ dapat ditambahkan dengan pola berkas yang sama.
 - Referensi: Hayes, G.P., dkk. (2018), Science, 362(6410), 58–61.
   DOI: 10.1126/science.aat4723
 - Sistem koordinat: WGS 84 (EPSG:4326)
-- Cakupan: 3 fitur palung, 661 titik, tiap region Slab2 dipangkas ke wilayah
+- Cakupan: 4 fitur palung, 708 titik, tiap region Slab2 dipangkas ke wilayah
   Indonesia:
   - `sum` → **Palung Sunda-Banda** (538 titik): Sumatra-Jawa-Nusa Tenggara
     hingga lengkung Banda. Bagian tumbukan kontinen Indo-Burma/Himalaya di utara
@@ -100,10 +210,17 @@ dapat ditambahkan dengan pola berkas yang sama.
     Talaud, dan Sulawesi Utara (dipangkas `lat ≤ 8,5°LU`).
   - `png` → **Palung Papua Utara / New Guinea** (62 titik): di utara Papua,
     dipangkas di batas Indonesia-PNG (`lon ≤ 141,5°BT`).
-- Tidak termasuk: Palung Sulawesi Utara (Minahasa) dan Palung Halmahera — kedua
-  region ini tidak tersedia di berkas palung Slab2.
-- Tanggal snapshot: 2026-07-22
-- SHA-256: `7F8E19E48F65D3321187B58844BE683E9FC0B592CD7002C5EEF6D6967FA9FB18`
+  - `sul` → **Palung Sulawesi Utara** (47 titik): batas MS/SU di utara lengan
+    utara Sulawesi, 119,25–123,43°BT. Region ini tidak ada di
+    `trenches_usgs_2017.csv`, sehingga diambil dari berkas pendamping
+    `trenches_usgs_2017_depths2.csv` di folder yang sama pada repositori
+    `usgs/slab2`.
+- Tidak termasuk: Palung Halmahera — Slab2 tidak menerbitkan sumbu palung untuk
+  region `hal` di berkas palung mana pun (node grid terdangkal ±33 km, di bawah
+  kompleks tumbukan Laut Maluku).
+- Tanggal snapshot: 2026-09-19 (tiga palung pertama tidak berubah dari
+  snapshot 2026-07-22)
+- SHA-256: `C0FACC6BBA77B05945FD8C1E5ADD6A4B109363BBA283CA75DB98F319F4D1D2C1`
 
 Menggantikan berkas `Trench/Sumatra_Java_trench.shp` sebelumnya yang tanpa
 atribusi sumber dan hanya mencakup Sumatra-Jawa. Aplikasi memuat GeoJSON ini

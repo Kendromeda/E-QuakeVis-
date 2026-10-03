@@ -580,6 +580,7 @@ def capture_filtered_map(
     geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     representative_scale_denominator: int | None = None,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
+    selection_bounds: tuple[float, float, float, float] | None = None,
 ) -> bytes:
     """Render a deterministic map snapshot without launching Edge/Chrome.
 
@@ -597,6 +598,7 @@ def capture_filtered_map(
         slab_geojson=slab_geojson,
         population_density_geojson=population_density_geojson,
         title="Snapshot Peta",
+        selection_bounds=selection_bounds,
         institution_name="",
         marker_scale_percent=marker_scale_percent,
         padding_percent=padding_percent,
@@ -769,6 +771,25 @@ def _map_bounds(df: pd.DataFrame, padding_percent: int) -> tuple[float, float, f
         latitude_center - latitude_span / 2.0,
         longitude_center + longitude_span / 2.0,
         latitude_center + latitude_span / 2.0,
+    )
+
+
+def _selection_frame_bounds(
+    selection_bounds: tuple[float, float, float, float],
+    padding_percent: int,
+) -> tuple[float, float, float, float]:
+    """Frame a user-drawn selection box with the same padding as the data."""
+    west, south, east, north = selection_bounds
+    padding_factor = 1.0 + (padding_percent / 100.0) * 2.0
+    longitude_span = max(0.05, east - west) * padding_factor
+    latitude_span = max(0.05, north - south) * padding_factor
+    longitude_center = (west + east) / 2.0
+    latitude_center = (south + north) / 2.0
+    return (
+        longitude_center - longitude_span / 2.0,
+        max(-85.0, latitude_center - latitude_span / 2.0),
+        longitude_center + longitude_span / 2.0,
+        min(85.0, latitude_center + latitude_span / 2.0),
     )
 
 
@@ -3697,12 +3718,16 @@ def _render_overview_map(
     province_geojson: dict[str, Any],
     current_bounds: tuple[float, float, float, float],
     size: tuple[int, int],
+    expand: float = 1.3,
+    min_span: float = 2.5,
 ) -> Image.Image:
     """Render a regional locator inset; geometry is clipped to the inset image."""
     width, height = size
     image = Image.new("RGB", (width, height), "#cfe3ec")
     draw = ImageDraw.Draw(image)
-    west, south, east, north = _overview_bounds(current_bounds, size)
+    west, south, east, north = _overview_bounds(
+        current_bounds, size, expand=expand, min_span=min_span
+    )
 
     def project(longitude: float, latitude: float) -> tuple[float, float]:
         return (
@@ -3748,6 +3773,8 @@ def _draw_locator_inset(
     source_y: int,
     scale: float,
     label_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    expand: float = 1.3,
+    min_span: float = 2.5,
 ) -> str:
     """Draw the locator exclusively in the publication sidebar."""
     side_x, side_y, side_width, _ = sidebar_box
@@ -3772,6 +3799,8 @@ def _draw_locator_inset(
         province_geojson,
         bounds,
         (inset_width, inset_height),
+        expand=expand,
+        min_span=min_span,
     )
     canvas.paste(overview, (side_x + int(22 * scale), inset_top + heading_height))
     return "sidebar"
@@ -4049,6 +4078,7 @@ def render_publication_map(
     geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     representative_scale_denominator: int | None = None,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
+    selection_bounds: tuple[float, float, float, float] | None = None,
 ) -> tuple[bytes, bytes]:
     page_pixels = get_publication_page_size(page_size, output_dpi)
     effective_geology_units, has_effective_geology_catalog = (
@@ -4104,7 +4134,11 @@ def render_publication_map(
         if show_geology and (province_names or district_names)
         else None
     )
-    if geology_region_bounds is not None:
+    if selection_bounds is not None:
+        # A box drawn on the distribution map is an explicit area of interest,
+        # so it frames the sheet even when the points inside it are sparse.
+        base_bounds = _selection_frame_bounds(selection_bounds, padding_percent)
+    elif geology_region_bounds is not None:
         base_bounds = geology_region_bounds
     elif has_earthquakes:
         base_bounds = _map_bounds(df, padding_percent)
@@ -5209,12 +5243,19 @@ def render_publication_map(
             canvas,
             draw,
             province_geojson,
-            bounds,
+            selection_bounds or bounds,
             sidebar_box,
             inset_top,
             source_y,
             scale,
             label_font,
+            # Kotak seleksi ditandai di tengah wilayah yang lebih luas agar
+            # lokasinya tetap mudah dikenali.
+            **(
+                {"expand": 4.0, "min_span": 8.0}
+                if selection_bounds is not None
+                else {}
+            ),
         )
 
     draw.line(

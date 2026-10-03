@@ -1,0 +1,43 @@
+{
+  "coordinate_reference": "WGS 84 longitude/latitude (EPSG:4326)",
+  "depth_convention": "kilometers positive downward from sea level",
+  "doi": "10.5066/F7PV6JNV",
+  "extent": [
+    91.55,
+    -11.45,
+    133.1,
+    26.700000000000003
+  ],
+  "id": "sum",
+  "model_version": "02.23.18",
+  "name": "Sumatra-Java (Sunda)",
+  "output_file": "sum.npz",
+  "output_sha256": "3fe5939207f548dc64e1dd74d856a14a41542422157555c36778726e18338a33",
+  "publication_doi": "10.1126/science.aat4723",
+  "publisher": "U.S. Geological Survey",
+  "shape": [
+    764,
+    832
+  ],
+  "snapshot_date": "2026-09-14",
+  "source": "https://raw.githubusercontent.com/DOI-USGS/neic-catalog-separation/aae2e073b361b35fdd19c0bd2d155c1443ed2559/neic_catalog_separation/data/Slab2/sum_slab2_dep_02.23.18.grd",
+  "source_crop_indices": [
+    91,
+    855,
+    91,
+    923
+  ],
+  "source_file": "sum_slab2_dep_02.23.18.grd",
+  "source_repository_commit": "aae2e073b361b35fdd19c0bd2d155c1443ed2559",
+  "source_sha256": "38f11750125810ac83c3a52a8bf4e08e800bf0fb2ef8ec136a9a5c7987705654",
+  "source_shape": [
+    941,
+    1041
+  ],
+  "spacing_degrees": [
+    0.04999999999999716,
+    0.05000000000000071
+  ],
+  "transformation": "Negate published z to positive-down depth; sort original x/y ascending; remove only exterior all-NaN rows/columns. All valid source nodes, source precision, spacing and internal NaN masks are preserved. No smoothing, triangulation, infill, extrapolation or geometry synthesis.",
+  "valid_nodes": 115512
+}

@@ -1,0 +1,43 @@
+{
+  "coordinate_reference": "WGS 84 longitude/latitude (EPSG:4326)",
+  "depth_convention": "kilometers positive downward from sea level",
+  "doi": "10.5066/F7PV6JNV",
+  "extent": [
+    121.8,
+    1.3000000000000003,
+    129.25,
+    17.150000000000002
+  ],
+  "id": "phi",
+  "model_version": "02.26.18",
+  "name": "Philippines",
+  "output_file": "phi.npz",
+  "output_sha256": "23c31d57eb1e47953a9fe6a12ca0bd7f7076aa96c04a9423972ee3331507600c",
+  "publication_doi": "10.1126/science.aat4723",
+  "publisher": "U.S. Geological Survey",
+  "shape": [
+    318,
+    150
+  ],
+  "snapshot_date": "2026-09-14",
+  "source": "https://raw.githubusercontent.com/DOI-USGS/neic-catalog-separation/aae2e073b361b35fdd19c0bd2d155c1443ed2559/neic_catalog_separation/data/Slab2/phi_slab2_dep_02.26.18.grd",
+  "source_crop_indices": [
+    66,
+    384,
+    76,
+    226
+  ],
+  "source_file": "phi_slab2_dep_02.26.18.grd",
+  "source_repository_commit": "aae2e073b361b35fdd19c0bd2d155c1443ed2559",
+  "source_sha256": "39ad6a0f3e6f28a9f7a5f34f66ab6025ebcdbd78f211282b56291c7d729aaba4",
+  "source_shape": [
+    461,
+    321
+  ],
+  "spacing_degrees": [
+    0.04999999999999716,
+    0.04999999999999982
+  ],
+  "transformation": "Negate published z to positive-down depth; sort original x/y ascending; remove only exterior all-NaN rows/columns. All valid source nodes, source precision, spacing and internal NaN masks are preserved. No smoothing, triangulation, infill, extrapolation or geometry synthesis.",
+  "valid_nodes": 8425
+}

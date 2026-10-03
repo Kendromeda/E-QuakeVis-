@@ -9,12 +9,19 @@ from pathlib import Path
 from typing import Any
 
 import folium
+from folium.plugins import Draw
 import numpy as np
 import pandas as pd
 import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_folium import st_folium
 
+from utils.bbox_selection import (
+    filter_by_bounds,
+    format_bounds,
+    latest_drawing_bounds,
+    parse_coordinate_bounds,
+)
 from utils.data_loader import (
     COLUMN_LABELS,
     DATABASE_COLUMNS,
@@ -43,6 +50,8 @@ from utils.earthquake_store import (
     working_database_signature,
 )
 from utils.hypocenter_3d import build_scene, depth_legend_stops
+from utils.seismic_workspace import build_workspace_payload, workspace_html
+from utils.slab_grid import SlabGridError, load_slab_grid
 from utils.fault_data import (
     FAULT_MAX_OFFSHORE_ASSOCIATION_KM,
     FaultDataError,
@@ -146,6 +155,15 @@ MAX_COAST_DISTANCE_KM = 50.0
 DEFAULT_COAST_DISTANCE_KM = 50.0
 TRENCH_DATA_PATH = APP_DIR / "data" / "indonesia_trench_slab2.geojson"
 SLAB_DATA_PATH = APP_DIR / "data" / "sum_slab2_dep_contours.in"
+# Kontur Sunda adalah berkas resmi Slab2; region lain ditelusuri dari grid Slab2
+# oleh scripts/build_slab2_contours.py dengan format yang sama.
+SLAB_CONTOUR_PATHS = (
+    SLAB_DATA_PATH,
+    *(
+        APP_DIR / "data" / "slab2" / f"{model}_slab2_dep_contours.in"
+        for model in ("sul", "hal", "png", "phi")
+    ),
+)
 SLAB_INTERVAL_OPTIONS = {"100 km": 100, "200 km": 200, "Semua (20 km)": 20}
 ENRICHMENT_VERSION = "regions-land-sea-v3-province-mask"
 TABLE_PREVIEW_LIMIT = 2_000
@@ -168,6 +186,12 @@ def initialize_state() -> None:
         "publication_map_result": None,
         "hidden_earthquake_ids": [],
         "last_earthquake_map_action": None,
+        # Kotak seleksi (west, south, east, north) yang digambar di peta sebaran.
+        "selection_bbox": None,
+        # Dinaikkan saat seleksi dihapus agar peta dipasang ulang tanpa kotak lama.
+        "selection_bbox_nonce": 0,
+        # Koordinat teks disinkronkan hanya ketika seleksi peta berubah.
+        "selection_bbox_input_synced": None,
     }
     for key, value in defaults.items():
         st.session_state.setdefault(key, value)
@@ -288,6 +312,18 @@ def apply_theme() -> None:
         [data-testid="stSidebar"] [data-testid="stExpander"] details {
             border-radius: 10px;
             border-color: var(--line);
+        }
+
+        [data-testid="stSidebar"] [data-testid="stForm"] [data-baseweb="input"] {
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+
+        [data-testid="stSidebar"] [data-testid="stForm"] [data-testid="stTextInput"] input {
+            padding: 0.3rem 0.35rem;
+            font-size: 0.8rem;
+            text-align: center;
+            font-variant-numeric: tabular-nums;
         }
 
         .depth-legend {
@@ -818,6 +854,57 @@ def clear_hidden_earthquakes() -> None:
     st.session_state.hidden_earthquake_ids = []
 
 
+def clear_selection_bbox() -> None:
+    """Drop the box filter and remount the map without the old shape."""
+    st.session_state.selection_bbox = None
+    st.session_state.selection_bbox_nonce += 1
+
+
+def render_coordinate_bbox_filter() -> None:
+    """Apply a typed rectangle through the same selection used by the map."""
+    bounds = st.session_state.selection_bbox
+    if bounds != st.session_state.selection_bbox_input_synced:
+        west, south, east, north = bounds if bounds is not None else (None,) * 4
+        for name, value in (("north", north), ("west", west),
+                            ("east", east), ("south", south)):
+            st.session_state[f"selection_bbox_{name}"] = (
+                format(value, ".15g") if value is not None else ""
+            )
+        st.session_state.selection_bbox_input_synced = bounds
+
+    with st.sidebar.form("selection_bbox_coordinate_form"):
+        st.markdown("**Seleksi kotak koordinat**")
+        st.caption("Derajat desimal · North > South dan East > West.")
+        _, north_column, _ = st.columns([1, 2, 1])
+        with north_column:
+            st.text_input("North", key="selection_bbox_north", placeholder="3.515")
+        west_column, east_column = st.columns(2)
+        with west_column:
+            st.text_input("West", key="selection_bbox_west", placeholder="108.61")
+        with east_column:
+            st.text_input("East", key="selection_bbox_east", placeholder="132.165")
+        _, south_column, _ = st.columns([1, 2, 1])
+        with south_column:
+            st.text_input("South", key="selection_bbox_south", placeholder="-12.037")
+        submitted = st.form_submit_button("Terapkan kotak", width="stretch")
+
+    if submitted:
+        try:
+            selected = parse_coordinate_bounds(
+                st.session_state.selection_bbox_north,
+                st.session_state.selection_bbox_west,
+                st.session_state.selection_bbox_east,
+                st.session_state.selection_bbox_south,
+            )
+        except ValueError as exc:
+            st.sidebar.error(str(exc))
+        else:
+            st.session_state.selection_bbox_input_synced = selected
+            if selected != bounds:
+                st.session_state.selection_bbox = selected
+                st.session_state.selection_bbox_nonce += 1
+
+
 BRAND_MARK = (
     '<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#ffffff" '
     'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
@@ -982,6 +1069,7 @@ def render_sidebar_filters(
         default=["Darat", "Laut"],
         help="Titik laut dipasangkan ke provinsi daratan terdekat hingga 400 km.",
     )
+    render_coordinate_bbox_filter()
 
     fault_distance_series: pd.Series | None = None
     max_selected_fault_distance: float | None = None
@@ -1817,6 +1905,7 @@ def render_publication_builder(
     geology_units: list[dict[str, Any]] | None = None,
     geology_index_units: list[dict[str, Any]] | None = None,
     selected_geology_keys: list[str] | None = None,
+    selection_bounds: tuple[float, float, float, float] | None = None,
 ) -> None:
     station_records = station_records or []
     geology_units = geology_units or []
@@ -2239,6 +2328,7 @@ def render_publication_builder(
                 str(publication_provinces),
                 str(publication_region_labels),
                 str(show_inset),
+                str(selection_bounds),
                 source_text,
             ]
         )
@@ -2246,7 +2336,9 @@ def render_publication_builder(
         publication_hasher.update(logo_bytes)
         publication_hasher.update(second_logo_bytes)
         publication_signature = publication_hasher.hexdigest()
-        can_frame_region = bool(selected_provinces or selected_districts)
+        can_frame_region = bool(
+            selected_provinces or selected_districts or selection_bounds
+        )
         build_disabled = not has_earthquakes and not can_frame_region
         if build_disabled:
             st.info(
@@ -2372,6 +2464,7 @@ def render_publication_builder(
                         publication_scale_denominator
                     ),
                     template_name=publication_template,
+                    selection_bounds=selection_bounds,
                     basemap_progress_callback=update_basemap_progress,
                 )
                 progress_phase["label"] = "Layout publikasi"
@@ -2431,6 +2524,7 @@ def render_publication_builder(
                         publication_scale_denominator
                     ),
                     template_name=publication_template,
+                    selection_bounds=selection_bounds,
                     basemap_progress_callback=update_basemap_progress,
                 )
             except PublicationMapError as exc:
@@ -2529,8 +2623,9 @@ SCENE_HTML = """
   .btn:hover { background: #f1f5f9; }
   .stage { position: relative; background:
            radial-gradient(120% 90% at 50% 0%, #ffffff 0%, #eef2f7 75%); }
-  canvas { display: block; width: 100%; cursor: grab; }
+  canvas { display: block; width: 100%; cursor: grab; outline: none; }
   canvas.drag { cursor: grabbing; }
+  canvas.keys { box-shadow: inset 0 0 0 2px #0b5ea8; }
   .readout { position: absolute; right: 12px; top: 10px; font-size: 11.5px; color: #5a6b84;
              background: rgba(255,255,255,.9); border: 1px solid #dce3ed; border-radius: 8px;
              padding: 5px 9px; font-variant-numeric: tabular-nums; }
@@ -2553,9 +2648,10 @@ SCENE_HTML = """
     <button class="btn" id="side" title="Penampang tegak lurus palung, sudut baca zona Wadati-Benioff">Penampang WBZ</button>
   </div>
   <div class="stage">
-    <canvas id="scene"></canvas>
+    <canvas id="scene" tabindex="0" aria-label="Adegan 3D hiposenter"></canvas>
     <div class="readout" id="readout"></div>
-    <div class="hint">Seret untuk memutar &middot; gulir untuk memperbesar</div>
+    <div class="hint" id="hint">Klik adegan lalu pakai W A S D untuk menggeser
+      &middot; seret untuk memutar &middot; gulir untuk memperbesar</div>
     <div class="tip" id="tip"></div>
   </div>
 </div>
@@ -2747,6 +2843,7 @@ for (const id of ['cBound', 'cFault', 'cSlab', 'cVolc', 'cStem', 'cDeep']) {
   document.getElementById(id).addEventListener('change', draw);
 }
 document.getElementById('reset').addEventListener('click', () => {
+  held.clear();
   Object.assign(state, { exag: 3, tilt: 35, yaw: -20, zoom: 1, panX: 0, panY: 0 });
   syncControls(); draw();
 });
@@ -2780,6 +2877,50 @@ function syncControls() {
   state.exag = Math.max(1.5, Math.min(8, suggested));
   syncControls();
 })();
+
+/* ---- WASD panning ---------------------------------------------------- */
+const PAN_KEYS = { w: [0, 1], s: [0, -1], a: [1, 0], d: [-1, 0] };
+const held = new Set();
+let panFrame = null;
+
+function panStep() {
+  if (!held.size) { panFrame = null; return; }
+  // Shift moves in bigger strides for crossing the whole scene quickly.
+  const speed = held.has('shift') ? 26 : 9;
+  let moved = false;
+  for (const key of held) {
+    const delta = PAN_KEYS[key];
+    if (!delta) continue;
+    state.panX += delta[0] * speed;
+    state.panY += delta[1] * speed;
+    moved = true;
+  }
+  // Shift on its own is a modifier, not a direction: stop rather than spin.
+  if (!moved) { panFrame = null; return; }
+  draw();
+  panFrame = requestAnimationFrame(panStep);
+}
+
+function keyName(event) {
+  if (event.key === 'Shift') return 'shift';
+  return (event.key || '').toLowerCase();
+}
+
+cv.addEventListener('keydown', (e) => {
+  const key = keyName(e);
+  if (!(key in PAN_KEYS) && key !== 'shift') return;
+  e.preventDefault();
+  held.add(key);
+  if (!panFrame) panFrame = requestAnimationFrame(panStep);
+});
+cv.addEventListener('keyup', (e) => { held.delete(keyName(e)); });
+cv.addEventListener('blur', () => {
+  held.clear();
+  cv.classList.remove('keys');
+});
+cv.addEventListener('focus', () => { cv.classList.add('keys'); });
+// Clicking to rotate should also arm the keyboard, so the two work together.
+cv.addEventListener('mousedown', () => cv.focus());
 
 let dragging = false, lastX = 0, lastY = 0;
 cv.addEventListener('mousedown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; cv.classList.add('drag'); });
@@ -2846,59 +2987,26 @@ def render_hypocenter_3d(
     visible_fault_indexes: list[int] | None,
     selected_volcano_names: list[str],
 ) -> None:
-    """Hiposenter 3D tab: the filtered catalogue plotted at its true depth.
-
-    Rendered by a small canvas scene rather than pydeck: st.pydeck_chart flattens
-    MapView pitch in Streamlit 1.50, which makes a depth view impossible, and it
-    injects an online basemap this offline-first app should not depend on.
-    """
-    if filtered_df.empty:
-        st.info(
-            "Tidak ada kejadian pada filter saat ini, sehingga tidak ada "
-            "hiposenter yang dapat digambar. Longgarkan filter di sidebar."
-        )
-        return
-
-    if slab_geojson is None and SLAB_DATA_PATH.exists():
-        # The sidebar switch only governs the 2D map; the 3D view needs the
-        # contours regardless so its own "Palung & slab" toggle means something.
+    """Offline scientific workspace with synchronized 3D and geodesic sections."""
+    grids = []
+    for model in ("sum", "sul", "hal", "png", "phi"):
         try:
-            slab_geojson = load_slab_reference(
-                str(SLAB_DATA_PATH), SLAB_DATA_PATH.stat().st_mtime_ns
-            )
-        except (SlabDataError, OSError):
-            slab_geojson = None
-
-    scene = build_scene(
+            grids.append(load_slab_grid(APP_DIR / "data" / "slab2" / f"{model}.npz"))
+        except SlabGridError as exc:
+            st.warning(f"Grid Slab2 {model} tidak dimuat: {exc}")
+    payload = build_workspace_payload(
         filtered_df,
+        grids=grids,
         fault_geojson=fault_geojson,
         volcano_geojson=volcano_geojson,
-        slab_geojson=slab_geojson,
         trench_geojson=trench_geojson,
         boundary_geojson=province_geojson,
         fault_indexes=visible_fault_indexes,
         volcano_names=(selected_volcano_names or None),
     )
-    if not scene["points"]["x"]:
-        st.warning(
-            "Kejadian pada filter ini tidak memiliki koordinat dan kedalaman "
-            "yang lengkap, sehingga tidak dapat ditempatkan pada ruang 3D."
-        )
-        return
-
-    html = SCENE_HTML.replace("__SCENE__", json.dumps(scene))
-    components.html(html, height=SCENE_CANVAS_HEIGHT + 96, scrolling=False)
-
-    render_depth_legend()
-    st.caption(
-        f"{len(scene['points']['x']):,} hiposenter mengikuti filter aktif, "
-        "digambar pada kedalaman aslinya.".replace(",", ".")
-        + " Kontur slab memakai skala warna yang sama dengan titik gempa, sehingga "
-        "titik yang warnanya menyatu dengan kontur di bawahnya menandai seismisitas "
-        "yang mengikuti bidang slab, yaitu zona Wadati-Benioff. Sesar, palung, dan "
-        "gunung api digambar pada kedalaman 0. Tekan \"Penampang WBZ\" untuk "
-        "melihatnya sebagai penampang tegak lurus palung."
-    )
+    if payload["dropped"]:
+        st.caption(f"{payload['dropped']:,} event tanpa posisi/depth valid dikeluarkan dari visualisasi.")
+    components.html(workspace_html(payload), height=1190, scrolling=True)
 
 
 def render_statistics(filtered_df: pd.DataFrame) -> None:
@@ -3170,14 +3278,45 @@ def render_results(
         geology_style_mode=geology_style_mode,
         embed_earthquake_layer=False,
     )
+    Draw(
+        export=False,
+        position="topleft",
+        draw_options={
+            "polyline": False,
+            "polygon": False,
+            "circle": False,
+            "marker": False,
+            "circlemarker": False,
+            "rectangle": {
+                "shapeOptions": {"color": "#2563eb", "weight": 2, "fillOpacity": 0.05},
+            },
+        },
+        edit_options={"edit": False, "remove": False},
+    ).add_to(map_shell)
+    selection_bbox = st.session_state.selection_bbox
     earthquake_layer = (
         build_earthquake_feature_group(filtered_df)
         if show_earthquakes and not filtered_df.empty
         else None
     )
+    if selection_bbox is not None:
+        # Kotak aktif digambar ulang di layer dinamis supaya tetap terlihat
+        # setelah peta dipasang ulang karena filter lain berubah.
+        if earthquake_layer is None:
+            earthquake_layer = folium.FeatureGroup(name="Seleksi kotak", show=True)
+        west, south, east, north = selection_bbox
+        folium.Rectangle(
+            bounds=[[south, west], [north, east]],
+            color="#2563eb",
+            weight=2,
+            dash_array="6 4",
+            fill=False,
+            interactive=False,
+        ).add_to(earthquake_layer)
     map_component_key = get_map_component_key(
         "earthquake-map-shell",
         map_extent_df,
+        st.session_state.selection_bbox_nonce,
         show_basemap,
         basemap_name,
         show_shortbread_roads,
@@ -3244,6 +3383,23 @@ def render_results(
                 "Dekat sesar (<= 10 km)", format_metric(count_near_fault(filtered_df))
             )
 
+        if selection_bbox is None:
+            st.caption(
+                "Gunakan tombol kotak di kiri peta untuk menyeleksi area. Gempa di "
+                "dalam kotak tetap dapat difilter lagi lewat sidebar."
+            )
+        else:
+            selection_columns = st.columns([4, 1], vertical_alignment="center")
+            selection_columns[0].info(
+                f"Seleksi kotak aktif: {format_bounds(selection_bbox)}. Gambar kotak "
+                "baru untuk mengganti area."
+            )
+            selection_columns[1].button(
+                "Hapus seleksi",
+                on_click=clear_selection_bbox,
+                width="stretch",
+                key="clear_selection_bbox_map",
+            )
         map_card = st.container(border=True)
         with map_card:
             map_result = st_folium(
@@ -3252,11 +3408,18 @@ def render_results(
                 # ukuran render pertama dan meluber saat jendela lebih sempit.
                 use_container_width=True,
                 height=MAP_HEIGHT,
-                returned_objects=["last_object_clicked_tooltip"],
+                returned_objects=["last_object_clicked_tooltip", "all_drawings"],
                 feature_group_to_add=earthquake_layer,
                 layer_control=folium.LayerControl(collapsed=True),
                 key=map_component_key,
             )
+        drawn_bounds = latest_drawing_bounds((map_result or {}).get("all_drawings"))
+        if drawn_bounds is not None:
+            # Peta baru memakai kunci baru sehingga gambar lama hilang dan
+            # hanya kotak seleksi aktif yang ditampilkan kembali.
+            st.session_state.selection_bbox = drawn_bounds
+            st.session_state.selection_bbox_nonce += 1
+            st.rerun()
         map_action = (map_result or {}).get("last_object_clicked_tooltip")
         if (
             isinstance(map_action, str)
@@ -3349,6 +3512,7 @@ def render_results(
             geology_units,
             geology_index_units,
             selected_geology_keys,
+            selection_bounds=selection_bbox,
         )
 
     st.markdown(
@@ -3391,14 +3555,21 @@ def main() -> None:
         st.stop()
 
     slab_geojson: dict[str, Any] | None = None
-    if SLAB_DATA_PATH.exists():
+    slab_features: list[dict[str, Any]] = []
+    for slab_path in SLAB_CONTOUR_PATHS:
+        if not slab_path.exists():
+            continue
         try:
-            slab_geojson = load_slab_reference(
-                str(SLAB_DATA_PATH),
-                SLAB_DATA_PATH.stat().st_mtime_ns,
+            slab_features.extend(
+                load_slab_reference(
+                    str(slab_path),
+                    slab_path.stat().st_mtime_ns,
+                )["features"]
             )
         except (SlabDataError, OSError) as exc:
-            st.sidebar.warning(f"Kontur slab tidak dimuat: {exc}")
+            st.sidebar.warning(f"Kontur slab {slab_path.name} tidak dimuat: {exc}")
+    if slab_features:
+        slab_geojson = {"type": "FeatureCollection", "features": slab_features}
 
     try:
         province_geojson = load_region_reference(
@@ -3573,6 +3744,16 @@ def main() -> None:
         filtered_df,
         st.session_state.hidden_earthquake_ids,
     )
+    selection_bbox = st.session_state.selection_bbox
+    if selection_bbox is not None:
+        filtered_df = filter_by_bounds(filtered_df, selection_bbox)
+        st.sidebar.caption(f"Seleksi kotak aktif: {format_bounds(selection_bbox)}.")
+        st.sidebar.button(
+            "Hapus seleksi kotak",
+            on_click=clear_selection_bbox,
+            width="stretch",
+            key="clear_selection_bbox_sidebar",
+        )
     hidden_count = len(st.session_state.hidden_earthquake_ids)
     if hidden_count:
         st.sidebar.caption(
