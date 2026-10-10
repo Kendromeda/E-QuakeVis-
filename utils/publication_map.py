@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from functools import lru_cache
@@ -20,6 +21,7 @@ import urllib.parse
 import urllib.request
 
 import mapbox_vector_tile
+import numpy as np
 import pandas as pd
 from PIL import Image, ImageColor, ImageDraw, ImageFont, UnidentifiedImageError
 
@@ -130,6 +132,22 @@ COORDINATE_FRAME_COLOR = "#102a72"
 
 class PublicationMapError(ValueError):
     """Raised when a publication map cannot be rendered."""
+
+
+@dataclass(frozen=True)
+class PublicationHazardLayer:
+    """Classified PSHA grid drawn beneath the tectonic lines of the sheet.
+
+    ``classes`` is a north-row-first integer grid (-1 = no computation site)
+    whose outer cell edges are ``bounds`` (west, south, east, north).
+    """
+
+    classes: Any
+    bounds: tuple[float, float, float, float]
+    colors: tuple[str, ...]
+    labels: tuple[str, ...]
+    heading: str
+    source: str
 
 
 class TileRetryAfterError(PublicationMapError):
@@ -455,6 +473,7 @@ def _sidebar_legend_block_height(
     has_earthquakes: bool = True,
     show_geology: bool = False,
     geology_row_count: int = 0,
+    hazard_class_count: int = 0,
 ) -> int:
     """Height in pixels from the institution text down to the locator inset.
 
@@ -498,6 +517,15 @@ def _sidebar_legend_block_height(
             int((5 if compact else 8) * scale)
             + int((22 if compact else 27) * scale)
             + int(density_rows * row_height + (4 if compact else 6) * scale)
+        )
+    if hazard_class_count:
+        columns = 3 if compact else 2
+        row_height = int((18 if compact else 24) * scale)
+        height += (
+            int((5 if compact else 8) * scale)
+            + int((22 if compact else 27) * scale)
+            + int(math.ceil(hazard_class_count / columns) * row_height
+                  + (4 if compact else 6) * scale)
         )
     if has_earthquakes:
         # Magnitude circles stay at their true (marker-matching) radius in both
@@ -549,6 +577,7 @@ def capture_filtered_map(
     trench_geojson: dict[str, Any] | None = None,
     slab_geojson: dict[str, Any] | None = None,
     population_density_geojson: dict[str, Any] | None = None,
+    hazard_layer: PublicationHazardLayer | None = None,
     output_size: tuple[int, int],
     padding_percent: int,
     marker_scale_percent: int,
@@ -597,6 +626,7 @@ def capture_filtered_map(
         trench_geojson=trench_geojson,
         slab_geojson=slab_geojson,
         population_density_geojson=population_density_geojson,
+        hazard_layer=hazard_layer,
         title="Snapshot Peta",
         selection_bounds=selection_bounds,
         institution_name="",
@@ -2072,6 +2102,45 @@ def _projector(
     return project
 
 
+def _render_hazard_overlay(
+    layer: PublicationHazardLayer,
+    bounds: tuple[float, float, float, float],
+    zoom: int,
+    size: tuple[int, int],
+    alpha: int = 200,
+) -> Image.Image:
+    """Sample the hazard grid at every map pixel centre (Web Mercator view).
+
+    Sampling per output pixel keeps cell edges at their true longitude and
+    latitude and crops the grid to the map frame without resampling blur.
+    """
+    width, height = size
+    west, south, east, north = bounds
+    x0, y0 = _mercator_pixel(west, north, zoom)
+    x1, y1 = _mercator_pixel(east, south, zoom)
+    world_size = 256.0 * (2**zoom)
+    world_x = x0 + (np.arange(width) + 0.5) / width * (x1 - x0)
+    world_y = y0 + (np.arange(height) + 0.5) / height * (y1 - y0)
+    longitudes = world_x / world_size * 360.0 - 180.0
+    latitudes = np.degrees(np.arctan(np.sinh(np.pi * (1.0 - 2.0 * world_y / world_size))))
+    classes = np.asarray(layer.classes, dtype=int)
+    row_count, column_count = classes.shape
+    grid_west, grid_south, grid_east, grid_north = layer.bounds
+    columns = np.floor(
+        (longitudes - grid_west) / (grid_east - grid_west) * column_count
+    ).astype(int)
+    rows = np.floor((grid_north - latitudes) / (grid_north - grid_south) * row_count).astype(int)
+    sampled = classes[np.clip(rows, 0, row_count - 1)][:, np.clip(columns, 0, column_count - 1)]
+    sampled[(rows < 0) | (rows >= row_count), :] = -1
+    sampled[:, (columns < 0) | (columns >= column_count)] = -1
+    palette = np.asarray([ImageColor.getrgb(color) for color in layer.colors], dtype=np.uint8)
+    rgba = np.zeros((height, width, 4), dtype=np.uint8)
+    valid = sampled >= 0
+    rgba[valid, :3] = palette[sampled[valid]]
+    rgba[valid, 3] = alpha
+    return Image.fromarray(rgba)
+
+
 def _visible_fault_features(
     fault_geojson: dict[str, Any],
     fault_names: Collection[str] | None,
@@ -2963,6 +3032,7 @@ def _publication_source_lines(
     show_geology: bool = False,
     geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     geology_rendered_locally: bool = False,
+    hazard_source: str | None = None,
 ) -> list[str]:
     """List only sources for data and layers present in the publication map.
 
@@ -3008,6 +3078,8 @@ def _publication_source_lines(
                 "Kepadatan penduduk: BPS kabupaten/kota, data kecamatan 2023-2025 "
                 "(ordinary kriging per provinsi)"
             )
+    if hazard_source:
+        lines.append(hazard_source)
     if show_provinces or show_inset:
         # MIT attribution is an obligation, not a courtesy. The BIG provenance
         # is what the upstream repository states, so the wording keeps that
@@ -3069,9 +3141,34 @@ def _draw_population_density_legend(
     compact: bool = False,
 ) -> int:
     """Draw an adaptive density legend and return the next y position."""
+    colors = list(density_colors)
+    return _draw_class_legend(
+        draw, side_x, side_width, legend_y, scale, label_font, small_font,
+        "Kepadatan penduduk (jiwa/km2)",
+        colors,
+        get_population_density_legend_labels(density_breaks, colors),
+        compact=compact,
+    )
+
+
+def _draw_class_legend(
+    draw: ImageDraw.ImageDraw,
+    side_x: int,
+    side_width: int,
+    legend_y: int,
+    scale: float,
+    label_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    small_font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    heading: str,
+    colors: Collection[str],
+    legend_labels: Collection[str],
+    *,
+    compact: bool = False,
+) -> int:
+    """Draw a heading plus colour-class swatches; return the next y position."""
     draw.text(
         (side_x + int(24 * scale), legend_y),
-        "Kepadatan penduduk (jiwa/km2)",
+        heading,
         font=label_font,
         fill="#111827",
     )
@@ -3081,8 +3178,7 @@ def _draw_population_density_legend(
     column_width = (side_width - horizontal_padding) / columns
     swatch_size = int((11 if compact else 14) * scale)
     row_height = int((18 if compact else 24) * scale)
-    colors = list(density_colors)
-    legend_labels = get_population_density_legend_labels(density_breaks, colors)
+    colors = list(colors)
     for index, (color, label) in enumerate(
         zip(colors, legend_labels)
     ):
@@ -4034,6 +4130,7 @@ def render_publication_map(
     trench_geojson: dict[str, Any] | None = None,
     slab_geojson: dict[str, Any] | None = None,
     population_density_geojson: dict[str, Any] | None = None,
+    hazard_layer: PublicationHazardLayer | None = None,
     title: str,
     institution_name: str,
     logo_bytes: bytes | None = None,
@@ -4366,6 +4463,11 @@ def render_publication_map(
                         dest=(destination_x, destination_y),
                     )
                 overlay_draw = ImageDraw.Draw(overlay, "RGBA")
+        if hazard_layer is not None:
+            overlay.alpha_composite(
+                _render_hazard_overlay(hazard_layer, bounds, zoom, overlay.size)
+            )
+            overlay_draw = ImageDraw.Draw(overlay, "RGBA")
         if district_geojson is not None and district_names:
             selected_districts = set(district_names)
             # Draw the district focus mask separately, then alpha-composite it.
@@ -4664,6 +4766,7 @@ def render_publication_map(
         show_population_density_legend=show_population_density_legend,
         show_stations=show_stations,
         density_color_count=len(population_density_colors),
+        hazard_class_count=len(hazard_layer.colors) if hazard_layer else 0,
         has_earthquakes=has_earthquakes,
         show_geology=show_geology,
         geology_row_count=min(6, len(selected_geology_keys or []) or 6),
@@ -4697,6 +4800,7 @@ def render_publication_map(
             show_population_density_legend=show_population_density_legend,
             show_stations=show_stations,
             density_color_count=len(population_density_colors),
+            hazard_class_count=len(hazard_layer.colors) if hazard_layer else 0,
             compact=True,
             has_earthquakes=has_earthquakes,
             show_geology=show_geology,
@@ -5131,6 +5235,21 @@ def render_publication_map(
             compact=compact_legends,
         )
 
+    if hazard_layer is not None:
+        legend_y = _draw_class_legend(
+            draw,
+            side_x,
+            side_width,
+            legend_y + int((5 if compact_legends else 8) * scale),
+            scale,
+            compact_label_font if compact_legends else label_font,
+            compact_small_font if compact_legends else small_font,
+            hazard_layer.heading,
+            hazard_layer.colors,
+            hazard_layer.labels,
+            compact=compact_legends,
+        )
+
     if has_earthquakes:
         legend_y += int((5 if compact_legends else 8) * scale)
         magnitude_title_font = compact_label_font if compact_legends else label_font
@@ -5217,6 +5336,7 @@ def render_publication_map(
         show_geology=show_geology,
         geology_style_mode=geology_style_mode,
         geology_rendered_locally=bool(geology_features),
+        hazard_source=hazard_layer.source if hazard_layer else None,
     )
     # The block has to grow with the credits it carries; a fixed height silently
     # clipped the last source once the geology lines were added. Counting source

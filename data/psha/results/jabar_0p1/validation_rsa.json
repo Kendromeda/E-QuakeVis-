@@ -1,0 +1,13 @@
+{
+  "reference": "SNI 1726:2019 via RSA Cipta Karya (PuSGeN 2017), PGA = MCE_G on SB",
+  "reference_url": "https://rsa.ciptakarya.pu.go.id/2021/",
+  "retrieved_utc": "2026-10-06T12:15:37+00:00",
+  "compared": "PGA 2% in 50 years (mean, Vs30 760 m/s) / RSA PGA",
+  "num_sites": 48,
+  "ratio_median": 1.166,
+  "ratio_p10": 1.062,
+  "ratio_p90": 1.223,
+  "ratio_min": 0.898,
+  "ratio_max": 1.404,
+  "within_20_percent": 38
+}

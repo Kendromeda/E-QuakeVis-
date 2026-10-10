@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 import hashlib
+from html import escape as escape_html
 import json
 from io import BytesIO
 import math
@@ -16,6 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from streamlit_folium import st_folium
 
+from psha_wizard import render_psha_wizard
 from utils.bbox_selection import (
     filter_by_bounds,
     format_bounds,
@@ -66,9 +68,11 @@ from utils.map_builder import (
     BASEMAP_OPTIONS,
     BASEMAP_RELIEF,
     BASEMAP_SHORTBREAD,
+    add_hazard_layer,
     build_earthquake_feature_group,
     build_indonesia_map,
     filter_hidden_earthquakes,
+    zoom_to_fit,
     get_earthquake_event_id,
 )
 from utils.geology_catalog import (
@@ -99,6 +103,7 @@ from utils.publication_map import (
     PUBLICATION_TEMPLATE_LEGACY,
     PUBLICATION_TEMPLATE_RTRW,
     PUBLICATION_TEMPLATES,
+    PublicationHazardLayer,
     PublicationMapError,
     capture_filtered_map,
     get_publication_map_size,
@@ -123,6 +128,40 @@ from utils.slab_data import (
     filter_slab_contours,
     load_slab_contours,
 )
+from utils.psha_jobs import (
+    SPACING_OPTIONS,
+    PSHAJob,
+    PSHAJobError,
+    active_job,
+    cancel_job,
+    delete_job,
+    estimate_runtime_seconds,
+    format_duration,
+    latest_progress,
+    list_jobs,
+    log_tail,
+    make_run_id,
+    MODEL_VERSIONS,
+    oq_available,
+    start_job,
+    waiting_for_memory,
+)
+from utils.psha_results import (
+    HAZARD_BREAKS_G,
+    HAZARD_COLORS,
+    IMT_LABELS,
+    PSHAResultError,
+    PSHARun,
+    hazard_classes,
+    hazard_grid,
+    hazard_legend_labels,
+    list_psha_runs,
+    load_hazard_curves,
+    load_hazard_map,
+    model_label,
+    nearest_site,
+)
+from utils.psha_sites import build_sites, load_province_features, province_names
 from utils.stats import calculate_summary_stats
 from utils.trench_data import TrenchDataError, load_trench_geojson
 from utils.volcano_data import (
@@ -149,6 +188,9 @@ POPULATION_DENSITY_DATA_PATH = (
     APP_DIR / "data" / "kepadatan_penduduk_kecamatan.csv"
 )
 STATION_DATA_PATH = APP_DIR / "data" / "stasiun_seismik.csv"
+# Hasil scripts/run_psha.py. Aplikasi membaca hasil yang selesai dan dapat
+# meluncurkan run baru di lingkungan .venv-oq (lihat utils/psha_jobs.py).
+PSHA_RESULTS_DIR = APP_DIR / "data" / "psha" / "results"
 # Ceiling for the "distance from coast" slider, kept small so the coastal filter
 # stays a near-shore tool.
 MAX_COAST_DISTANCE_KM = 50.0
@@ -2173,6 +2215,48 @@ def render_publication_builder(
                 key="publication_population_density_legend",
                 disabled=not publication_population_density,
             )
+            try:
+                psha_runs = list_psha_runs(PSHA_RESULTS_DIR)
+            except PSHAResultError:
+                psha_runs = []
+            publication_hazard = st.toggle(
+                "Layer bahaya gempa (PSHA)",
+                value=False,
+                key="publication_hazard",
+                disabled=not psha_runs,
+                help=(
+                    "Raster hasil OpenQuake dari tab Bahaya Gempa (PSHA). "
+                    "Tanpa titik gempa dan tanpa wilayah terpilih, cakupan peta "
+                    "mengikuti batas run PSHA."
+                ),
+            )
+            publication_hazard_run: PSHARun | None = None
+            publication_hazard_column = None
+            if publication_hazard:
+                publication_hazard_run = st.selectbox(
+                    "Hasil PSHA",
+                    psha_runs,
+                    format_func=lambda item: item.run_id,
+                    key="publication_hazard_run",
+                )
+                publication_hazard_imt = st.selectbox(
+                    "Parameter PSHA",
+                    publication_hazard_run.manifest["imts"],
+                    format_func=lambda value: IMT_LABELS.get(value, value),
+                    key="publication_hazard_imt",
+                )
+                publication_hazard_column = st.radio(
+                    "Periode ulang PSHA",
+                    [
+                        column for column in publication_hazard_run.columns
+                        if column.imt == publication_hazard_imt
+                    ],
+                    format_func=lambda item: (
+                        f"{item.return_period_years:,} tahun".replace(",", ".")
+                    ),
+                    horizontal=True,
+                    key="publication_hazard_period",
+                )
             publication_geology = show_geology and st.toggle(
                 f"Layer geologi — {geology_style_mode}",
                 value=show_geology,
@@ -2272,6 +2356,55 @@ def render_publication_builder(
                 )
         logo_bytes = logo_file.getvalue() if logo_file else b""
         second_logo_bytes = second_logo_file.getvalue() if second_logo_file else b""
+        publication_hazard_layer: PublicationHazardLayer | None = None
+        publication_hazard_key = "none"
+        if publication_hazard_run is not None and publication_hazard_column is not None:
+            try:
+                hazard_classes_grid, hazard_bounds = build_psha_raster(
+                    str(publication_hazard_run.path),
+                    (publication_hazard_run.path / "manifest.json").stat().st_mtime_ns,
+                    publication_hazard_column.column,
+                    publication_hazard_column.imt,
+                    publication_hazard_run.spacing,
+                )
+            except (PSHAResultError, OSError) as exc:
+                st.error(f"Layer PSHA tidak dapat dimuat: {exc}")
+            else:
+                hazard_manifest = publication_hazard_run.manifest
+                publication_hazard_layer = PublicationHazardLayer(
+                    classes=hazard_classes_grid,
+                    bounds=hazard_bounds,
+                    colors=HAZARD_COLORS,
+                    labels=tuple(
+                        hazard_legend_labels(HAZARD_BREAKS_G[publication_hazard_column.imt])
+                    ),
+                    heading=(
+                        f"{publication_hazard_column.imt} "
+                        f"{publication_hazard_column.return_period_years:,} th (g)"
+                    ).replace(",", "."),
+                    source=(
+                        "Bahaya gempa: PSHA OpenQuake "
+                        f"{hazard_manifest['openquake_version']}, model "
+                        f"{model_label(hazard_manifest)} "
+                        f"({hazard_manifest['model']['license']}); rerata logic tree, "
+                        f"Vs30 {hazard_manifest['site_condition']['vs30_m_s']:g} m/s, "
+                        f"grid {publication_hazard_run.spacing:g}°"
+                    ),
+                )
+                publication_hazard_key = (
+                    f"{publication_hazard_run.run_id}:{publication_hazard_column.column}:"
+                    f"{(publication_hazard_run.path / 'manifest.json').stat().st_mtime_ns}"
+                )
+        # Peta tanpa episenter dan tanpa wilayah dibingkai pada cakupan run PSHA.
+        publication_selection_bounds = selection_bounds
+        if (
+            publication_hazard_layer is not None
+            and selection_bounds is None
+            and not selected_provinces
+            and not selected_districts
+            and not (publication_earthquakes and has_earthquakes)
+        ):
+            publication_selection_bounds = publication_hazard_layer.bounds
         publication_hasher = hashlib.sha256()
         publication_row_hashes = pd.util.hash_pandas_object(
             filtered_df[["waktu", "lintang", "bujur", "kedalaman", "magnitudo"]],
@@ -2328,7 +2461,8 @@ def render_publication_builder(
                 str(publication_provinces),
                 str(publication_region_labels),
                 str(show_inset),
-                str(selection_bounds),
+                str(publication_selection_bounds),
+                publication_hazard_key,
                 source_text,
             ]
         )
@@ -2337,7 +2471,7 @@ def render_publication_builder(
         publication_hasher.update(second_logo_bytes)
         publication_signature = publication_hasher.hexdigest()
         can_frame_region = bool(
-            selected_provinces or selected_districts or selection_bounds
+            selected_provinces or selected_districts or publication_selection_bounds
         )
         build_disabled = not has_earthquakes and not can_frame_region
         if build_disabled:
@@ -2425,6 +2559,7 @@ def render_publication_builder(
                     trench_geojson=trench_geojson,
                     slab_geojson=slab_geojson,
                     population_density_geojson=population_density_geojson,
+                    hazard_layer=publication_hazard_layer,
                     show_earthquakes=publication_earthquakes,
                     show_slabs=publication_slabs,
                     show_stations=publication_stations,
@@ -2464,7 +2599,7 @@ def render_publication_builder(
                         publication_scale_denominator
                     ),
                     template_name=publication_template,
-                    selection_bounds=selection_bounds,
+                    selection_bounds=publication_selection_bounds,
                     basemap_progress_callback=update_basemap_progress,
                 )
                 progress_phase["label"] = "Layout publikasi"
@@ -2477,6 +2612,7 @@ def render_publication_builder(
                     trench_geojson=trench_geojson,
                     slab_geojson=slab_geojson,
                     population_density_geojson=population_density_geojson,
+                    hazard_layer=publication_hazard_layer,
                     show_earthquakes=publication_earthquakes,
                     show_slabs=publication_slabs,
                     show_stations=publication_stations,
@@ -2524,7 +2660,7 @@ def render_publication_builder(
                         publication_scale_denominator
                     ),
                     template_name=publication_template,
-                    selection_bounds=selection_bounds,
+                    selection_bounds=publication_selection_bounds,
                     basemap_progress_callback=update_basemap_progress,
                 )
             except PublicationMapError as exc:
@@ -3009,6 +3145,452 @@ def render_hypocenter_3d(
     components.html(workspace_html(payload), height=1190, scrolling=True)
 
 
+@st.cache_data(show_spinner=False, max_entries=24)
+def build_psha_raster(
+    run_path: str,
+    manifest_mtime_ns: int,
+    column: str,
+    imt: str,
+    spacing: float,
+) -> tuple[np.ndarray, tuple[float, float, float, float]]:
+    """Classified hazard grid for one IMT/return period (cached per result file)."""
+    del manifest_mtime_ns  # Cache key only.
+    run = next(run for run in list_psha_runs(Path(run_path).parent)
+               if str(run.path) == run_path)
+    values, bounds = hazard_grid(load_hazard_map(run), column, spacing)
+    return hazard_classes(values, HAZARD_BREAKS_G[imt]), bounds
+
+
+def format_g(value: float) -> str:
+    return f"{value:.3f} g".replace(".", ",")
+
+
+def render_psha_site_detail(run: PSHARun, hazard_df: pd.DataFrame, site_index: int) -> None:
+    """Hazard values and mean hazard curves at one computation site."""
+    import plotly.graph_objects as go
+
+    site = hazard_df.iloc[site_index]
+    st.markdown(
+        f'<div class="section-heading">Situs {site["lat"]:.2f}°, {site["lon"]:.2f}°</div>',
+        unsafe_allow_html=True,
+    )
+    st.dataframe(
+        pd.DataFrame([
+            {
+                "Parameter": IMT_LABELS.get(column.imt, column.imt),
+                "Periode ulang": f"{column.return_period_years:,} tahun".replace(",", "."),
+                "Peluang terlampaui": (
+                    f"{column.poe:.0%} dalam "
+                    f"{run.manifest['investigation_time_years']:g} tahun"
+                ),
+                "Nilai (g)": round(float(site[column.column]), 4),
+            }
+            for column in run.columns
+        ]),
+        hide_index=True,
+        width="stretch",
+    )
+    figure = go.Figure()
+    curve_rows = []
+    for imt in run.manifest["imts"]:
+        levels, curves = load_hazard_curves(run, imt)
+        poes = curves.iloc[site_index][[c for c in curves.columns if c.startswith("poe-")]]
+        poes = poes.to_numpy(float)
+        positive = poes > 0
+        figure.add_trace(go.Scatter(
+            x=levels[positive], y=poes[positive], mode="lines+markers", name=imt,
+            marker={"size": 4},
+        ))
+        curve_rows.extend(
+            {"imt": imt, "level_g": level, "poe": poe} for level, poe in zip(levels, poes))
+    for poe in run.manifest["poes"]:
+        figure.add_hline(
+            y=poe, line_dash="dot", line_color="#6b7280",
+            annotation_text=f"{poe:.0%} / {run.manifest['investigation_time_years']:g} th",
+            annotation_position="bottom left",
+        )
+    figure.update_layout(
+        height=340, margin={"l": 10, "r": 10, "t": 30, "b": 10},
+        xaxis={"type": "log", "title": "Intensitas (g)"},
+        yaxis={"type": "log", "title": (
+            f"Peluang terlampaui dalam {run.manifest['investigation_time_years']:g} tahun")},
+        legend={"orientation": "h", "y": 1.12},
+    )
+    # Streamlit 1.50: width hanya dikenali sebagai kwargs Plotly (deprecated).
+    st.plotly_chart(figure, use_container_width=True)
+    st.download_button(
+        "Unduh kurva hazard situs (CSV)",
+        pd.DataFrame(curve_rows).to_csv(index=False).encode("utf-8"),
+        file_name=f"kurva_hazard_{run.run_id}_{site['lat']:.2f}_{site['lon']:.2f}.csv",
+        mime="text/csv",
+        key=f"psha_curve_download_{run.run_id}_{site_index}",
+    )
+
+
+def render_psha_validation(run: PSHARun) -> None:
+    """Perbandingan PGA 2475 tahun dengan PGA SNI 1726:2019 (RSA Cipta Karya)."""
+    summary_path = run.path / "validation_rsa.json"
+    table_path = run.path / "validation_rsa.csv"
+    if not (summary_path.is_file() and table_path.is_file()):
+        return
+    try:
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        table = pd.read_csv(table_path)
+    except (OSError, ValueError) as exc:
+        st.warning(f"Hasil validasi RSA tidak dapat dibaca: {exc}")
+        return
+    with st.expander("Validasi terhadap SNI 1726:2019 (RSA Cipta Karya)"):
+        columns = st.columns(4)
+        columns[0].metric("Situs dibandingkan", summary["num_sites"])
+        columns[1].metric("Median rasio PGA", f"{summary['ratio_median']:.2f}".replace(".", ","))
+        columns[2].metric(
+            "Rentang P10–P90",
+            f"{summary['ratio_p10']:.2f}–{summary['ratio_p90']:.2f}".replace(".", ","),
+        )
+        columns[3].metric("Selisih ≤ 20%", f"{summary['within_20_percent']} situs")
+        st.caption(
+            f"Rasio = PGA 2% dalam 50 tahun dari run ini ({model_label(run.manifest)}) ÷ "
+            "PGA (MCE_G, kelas situs SB) SNI 1726:2019 dari RSA Cipta Karya (berbasis "
+            "PuSGeN 2017). Ss dan S1 "
+            "SNI adalah MCE_R risk-targeted arah maksimum sehingga hanya dicantumkan "
+            f"sebagai referensi. Diambil {summary['retrieved_utc'][:10]} dengan "
+            "scripts/compare_psha_rsa.py."
+        )
+        st.dataframe(table, hide_index=True, width="stretch")
+
+
+@st.cache_data(show_spinner=False)
+def psha_province_names() -> list[str]:
+    return province_names(load_province_features())
+
+
+@st.cache_data(show_spinner=False)
+def count_psha_sites(provinces: tuple[str, ...], spacing: float) -> int:
+    return len(build_sites(load_province_features(), provinces, spacing))
+
+
+def render_psha_runner(expanded: bool) -> None:
+    """Formulir untuk menjalankan scripts/run_psha.py dari aplikasi."""
+    with st.expander("Hitung PSHA wilayah baru", expanded=expanded):
+        if not oq_available():
+            st.info(
+                "Perhitungan dari aplikasi memerlukan lingkungan OpenQuake "
+                "(`.venv-oq`) di folder aplikasi. Lingkungan ini belum tersedia "
+                "di komputer ini; lihat PLAN_PSHA.md untuk pemasangannya."
+            )
+            return
+        if active_job(PSHA_RESULTS_DIR) is not None:
+            render_psha_job_monitor()
+            return
+        render_psha_job_form()
+        for job in list_jobs(PSHA_RESULTS_DIR):
+            if job.state == "failed":
+                render_failed_psha_job(job)
+
+
+def render_psha_job_form() -> None:
+    all_provinces = psha_province_names()
+    whole_country = st.checkbox("Seluruh Indonesia", key="psha_new_all")
+    provinces = st.multiselect(
+        "Provinsi",
+        all_provinces,
+        key="psha_new_provinces",
+        disabled=whole_country,
+        placeholder="Pilih satu atau beberapa provinsi",
+    )
+    spacing = st.radio(
+        "Jarak grid situs",
+        SPACING_OPTIONS,
+        index=1,
+        format_func=lambda value: f"{value:g}° (±{value * 111:.0f} km)".replace(".", ","),
+        horizontal=True,
+        key="psha_new_spacing",
+        help=(
+            "Grid lebih renggang berarti lebih sedikit titik dan perhitungan lebih "
+            "cepat, tetapi peta lebih kasar. Waktu hitung sebanding dengan jumlah situs."
+        ),
+    )
+    model_version = st.radio(
+        "Model sumber gempa",
+        MODEL_VERSIONS,
+        format_func=lambda version: {
+            "v2024.0.0": "GEM IDN v2024 (PuSGeN 2024, CC BY-NC-SA, non-komersial)",
+            "v2017.1.0": "GEM IDN v2017 (PuSGeN 2017, CC BY-SA)",
+        }.get(version, version),
+        key="psha_new_model",
+    )
+    selected = () if whole_country else tuple(provinces)
+    if not whole_country and not selected:
+        st.caption("Pilih provinsi atau centang Seluruh Indonesia.")
+        return
+    num_sites = count_psha_sites(selected, float(spacing))
+    estimate = estimate_runtime_seconds(num_sites)
+    run_id = make_run_id(selected, float(spacing), all_provinces, PSHA_RESULTS_DIR,
+                         model_version)
+    metrics = st.columns(2)
+    metrics[0].metric("Jumlah situs", f"{num_sites:,}".replace(",", "."))
+    metrics[1].metric("Perkiraan waktu", format_duration(estimate))
+    st.caption(f"Hasil akan disimpan sebagai run `{run_id}`.")
+    if num_sites == 0:
+        st.warning("Tidak ada titik grid di daratan wilayah ini. Perkecil jarak grid.")
+        return
+    if estimate > 3 * 3600:
+        st.warning(
+            "Perhitungan ini lama. Laptop harus tetap menyala dan tidak tidur; "
+            "pertimbangkan grid yang lebih renggang."
+        )
+    st.caption(
+        "Batuan referensi Vs30 760 m/s, PGA/SA 0,2/SA 1,0 untuk periode ulang 475 dan "
+        "2.475 tahun. Perhitungan memakai hampir seluruh CPU dan RAM; hanya satu run "
+        "yang dapat berjalan sekaligus. Perkiraan waktu berdasarkan run Jawa Barat "
+        "v2017 (382 situs, 20,6 menit); model v2024 lebih berat sehingga bisa lebih lama."
+    )
+    if st.button("Mulai hitung", type="primary", key="psha_new_start"):
+        try:
+            start_job(run_id, selected, float(spacing), num_sites, PSHA_RESULTS_DIR,
+                      model_version=model_version)
+        except (PSHAJobError, OSError) as exc:
+            st.error(f"Perhitungan tidak dapat dimulai: {exc}")
+            return
+        st.rerun()
+
+
+@st.fragment(run_every=10)
+def render_psha_job_monitor() -> None:
+    job = active_job(PSHA_RESULTS_DIR)
+    if job is None:
+        # Selesai atau gagal: muat ulang seluruh tab agar daftar hasil diperbarui.
+        st.rerun(scope="app")
+        return
+    info = job.info
+    area = ", ".join(info["provinces"]) or "Seluruh Indonesia"
+    st.markdown(
+        f"**Sedang menghitung `{job.run_id}`** (GEM IDN "
+        f"{info.get('model_version', '?')}): {escape_html(area)}, grid "
+        f"{info['spacing_degrees']:g}°, "
+        f"{int(info['num_sites']):,} situs.".replace(",", ".")
+    )
+    elapsed = job.elapsed_seconds()
+    estimate = float(info["estimated_seconds"])
+    progress = latest_progress(job)
+    stage = f"tahap {progress[0]} {progress[1]}%" if progress else "menyiapkan model"
+    st.progress(
+        min(elapsed / estimate, 0.99) if estimate > 0 else 0.0,
+        text=(
+            f"{format_duration(elapsed)} berjalan dari perkiraan "
+            f"{format_duration(estimate)} · {stage}"
+        ),
+    )
+    memory_use = waiting_for_memory(job)
+    if memory_use is not None:
+        st.warning(
+            f"OpenQuake menunggu: RAM terpakai {memory_use}%, sedangkan OpenQuake baru "
+            "mulai bila pemakaian di bawah 80%. Tutup aplikasi lain (browser, chat, "
+            "dsb.); perhitungan akan lanjut sendiri."
+        )
+    st.code(log_tail(job) or "(log belum ada)", language=None)
+    st.caption(
+        "Status diperbarui otomatis setiap 10 detik. Perhitungan tetap berjalan "
+        "walaupun halaman ditutup."
+    )
+    if st.button("Hentikan perhitungan", key=f"psha_cancel_{job.run_id}"):
+        cancel_job(job)
+        st.rerun(scope="app")
+
+
+def render_failed_psha_job(job: PSHAJob) -> None:
+    st.error(f"Run `{job.run_id}` gagal atau dihentikan sebelum selesai.")
+    with st.popover("Lihat log"):
+        st.code(log_tail(job, lines=30) or "(log kosong)", language=None)
+    if st.button("Hapus folder run ini", key=f"psha_delete_{job.run_id}"):
+        try:
+            delete_job(job, PSHA_RESULTS_DIR)
+        except (PSHAJobError, OSError) as exc:
+            st.error(str(exc))
+            return
+        st.rerun()
+
+
+def render_psha_hazard(
+    fault_geojson: dict[str, Any],
+    trench_geojson: dict[str, Any],
+    province_geojson: dict[str, Any],
+) -> None:
+    """Peta bahaya gempa probabilistik dari hasil OpenQuake yang sudah dihitung."""
+    try:
+        runs = list_psha_runs(PSHA_RESULTS_DIR)
+    except PSHAResultError as exc:
+        st.error(str(exc))
+        return
+    render_psha_runner(expanded=(
+        not runs
+        or bool(st.session_state.get("psha_new_provinces"))
+        or bool(st.session_state.get("psha_new_all"))
+        or active_job(PSHA_RESULTS_DIR) is not None
+    ))
+    if not runs:
+        st.info(
+            "Belum ada hasil PSHA. Pilih wilayah dan jarak grid pada bagian "
+            "\"Hitung PSHA wilayah baru\" di atas."
+        )
+        return
+
+    controls = st.columns([2, 2, 2])
+    run = controls[0].selectbox(
+        "Hasil perhitungan",
+        runs,
+        format_func=lambda item: (
+            f"{item.run_id} · {item.manifest['model']['model_version']} · "
+            f"{int(item.manifest['num_sites']):,} situs".replace(",", ".")
+        ),
+        key="psha_run",
+    )
+    imt = controls[1].selectbox(
+        "Parameter guncangan",
+        run.manifest["imts"],
+        format_func=lambda value: IMT_LABELS.get(value, value),
+        key="psha_imt",
+    )
+    imt_columns = [column for column in run.columns if column.imt == imt]
+    column = controls[2].radio(
+        "Periode ulang",
+        imt_columns,
+        format_func=lambda item: (
+            f"{item.return_period_years:,} th ({item.poe:.0%}/"
+            f"{run.manifest['investigation_time_years']:g} th)"
+        ).replace(",", "."),
+        horizontal=True,
+        key="psha_period",
+    )
+    try:
+        hazard_df = load_hazard_map(run)
+        classes, bounds = build_psha_raster(
+            str(run.path),
+            (run.path / "manifest.json").stat().st_mtime_ns,
+            column.column,
+            imt,
+            run.spacing,
+        )
+    except (PSHAResultError, OSError) as exc:
+        st.error(str(exc))
+        return
+
+    values = hazard_df[column.column]
+    metric_columns = st.columns(4)
+    metric_columns[0].metric("Situs dihitung", f"{len(hazard_df):,}".replace(",", "."))
+    metric_columns[1].metric("Minimum", format_g(values.min()))
+    metric_columns[2].metric("Median", format_g(values.median()))
+    metric_columns[3].metric("Maksimum", format_g(values.max()))
+
+    hazard_map = build_indonesia_map(
+        fault_geojson=fault_geojson,
+        trench_geojson=trench_geojson,
+        show_earthquakes=False,
+        show_fault_labels=False,
+        show_slabs=False,
+        show_region_labels=False,
+        show_tectonic_legend=False,
+        show_layer_control=False,
+        include_geology_layer=False,
+        show_distance_measure=False,
+    )
+    folium.GeoJson(
+        province_geojson,
+        name="Batas Provinsi",
+        interactive=False,
+        style_function=lambda _feature: {
+            "color": "#374151", "weight": 0.8, "opacity": 0.7, "fill": False,
+        },
+    ).add_to(hazard_map)
+    model = run.manifest["model"]
+    site_condition = run.manifest["site_condition"]
+    add_hazard_layer(
+        hazard_map,
+        classes,
+        bounds,
+        HAZARD_COLORS,
+        hazard_legend_labels(HAZARD_BREAKS_G[imt]),
+        title=f"{imt} · {column.return_period_years:,} tahun (g)".replace(",", "."),
+        subtitle=(
+            f"Rerata logic tree, Vs30 = {site_condition['vs30_m_s']:g} m/s, "
+            f"grid {run.spacing:g}°"
+        ),
+        source_html=(
+            f"Model: {escape_html(model_label(run.manifest))}, "
+            f"{escape_html(model['license'])}. Dihitung dengan OpenQuake "
+            f"{escape_html(run.manifest['openquake_version'])}."
+        ),
+    )
+    west, south, east, north = bounds
+    hazard_map.location = [(south + north) / 2, (west + east) / 2]
+    hazard_map.options["zoom"] = zoom_to_fit(bounds, 700, MAP_HEIGHT - 120)
+
+    selected_key = f"psha_site_{run.run_id}"
+    selected_index = st.session_state.get(selected_key)
+    if selected_index is not None and selected_index < len(hazard_df):
+        site = hazard_df.iloc[selected_index]
+        folium.CircleMarker(
+            [float(site["lat"]), float(site["lon"])],
+            radius=7, color="#111827", weight=2, fill=True, fill_color="#ffffff",
+            fill_opacity=0.9,
+            tooltip=f"{column.column}: {format_g(float(site[column.column]))}",
+        ).add_to(hazard_map)
+
+    map_column, detail_column = st.columns([3, 2])
+    with map_column.container(border=True):
+        map_result = st_folium(
+            hazard_map,
+            use_container_width=True,
+            height=MAP_HEIGHT - 120,
+            returned_objects=["last_clicked"],
+            layer_control=folium.LayerControl(collapsed=True),
+            key=f"psha_map_{run.run_id}_{column.column}",
+        )
+    clicked = (map_result or {}).get("last_clicked")
+    if clicked and clicked != st.session_state.get("psha_last_click"):
+        st.session_state.psha_last_click = clicked
+        index, distance_km = nearest_site(hazard_df, clicked["lng"], clicked["lat"])
+        # Klik di luar sel situs mana pun (laut atau di luar wilayah run) diabaikan.
+        if distance_km <= run.spacing * 111.32 * 0.75:
+            st.session_state[selected_key] = index
+            st.rerun()
+        else:
+            st.session_state.psha_click_outside = True
+
+    with detail_column.container(border=True):
+        if st.session_state.get(selected_key) is None:
+            st.markdown('<div class="section-heading">Kurva Hazard</div>', unsafe_allow_html=True)
+            st.caption(
+                "Klik titik daratan pada peta untuk melihat nilai hazard dan kurva "
+                "hazard di situs perhitungan terdekat."
+            )
+        else:
+            try:
+                render_psha_site_detail(run, hazard_df, int(st.session_state[selected_key]))
+            except PSHAResultError as exc:
+                st.error(str(exc))
+        if st.session_state.pop("psha_click_outside", False):
+            st.caption("Titik yang diklik berada di luar area perhitungan run ini.")
+
+    st.download_button(
+        f"Unduh grid {column.column} (CSV)",
+        hazard_df[["lon", "lat", column.column]]
+        .rename(columns={column.column: f"{column.column}_g"})
+        .to_csv(index=False)
+        .encode("utf-8"),
+        file_name=f"psha_{run.run_id}_{column.column}.csv",
+        mime="text/csv",
+        key="psha_grid_download",
+    )
+    render_psha_validation(run)
+    st.caption(
+        "Peta bahaya probabilistik (uniform hazard) pada batuan referensi, rerata "
+        f"logic tree model {model_label(run.manifest)}. Nilai "
+        "ini bukan pengganti peta desain SNI 1726:2019 (MCE_R, risk-targeted). "
+        f"Sumber model: {model['source']} ({model['license']}, atribusi wajib)."
+    )
+
+
 def render_statistics(filtered_df: pd.DataFrame) -> None:
     """Statistik tab: ringkasan angka dan empat grafik yang sebelumnya tidak ada."""
     if filtered_df.empty:
@@ -3348,10 +3930,15 @@ def render_results(
         tuple(unit.get("key", "") for unit in geology_units),
     )
 
-    map_tab, space_tab, statistics_tab, table_tab, publication_tab = st.tabs(
+    (
+        map_tab, space_tab, hazard_tab, wizard_tab, statistics_tab, table_tab,
+        publication_tab,
+    ) = st.tabs(
         [
             "Peta Sebaran",
             "Hiposenter 3D",
+            "Bahaya Gempa (PSHA)",
+            "Bangun Model PSHA",
             "Statistik",
             "Data Kejadian",
             "Peta Publikasi",
@@ -3474,6 +4061,12 @@ def render_results(
                 visible_fault_indexes,
                 selected_volcano_names,
             )
+
+    with hazard_tab:
+        render_psha_hazard(fault_geojson, trench_geojson, province_geojson)
+
+    with wizard_tab:
+        render_psha_wizard(PSHA_RESULTS_DIR)
 
     with statistics_tab:
         render_statistics(filtered_df)

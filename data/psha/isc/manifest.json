@@ -1,0 +1,38 @@
+{
+  "source": "http://www.isc.ac.uk/fdsnws/event/1/query",
+  "citation": "International Seismological Centre (2026), On-line Bulletin, https://doi.org/10.31905/D808B830",
+  "license": "ISC Bulletin: free to use with citation",
+  "retrieved_utc": "2026-10-10T01:01:52+00:00",
+  "region": {
+    "minlatitude": -11.5,
+    "maxlatitude": 6.5,
+    "minlongitude": 94.5,
+    "maxlongitude": 141.5
+  },
+  "stages": [
+    {
+      "name": "recent_m4",
+      "start": "2008-11-01",
+      "end": "2026-10-10",
+      "minmagnitude": 4.0,
+      "maxmagnitude": null
+    },
+    {
+      "name": "history",
+      "start": "1904-01-01",
+      "end": "2008-11-01",
+      "minmagnitude": null,
+      "maxmagnitude": null
+    },
+    {
+      "name": "recent_small",
+      "start": "2008-11-01",
+      "end": "2026-10-10",
+      "minmagnitude": null,
+      "maxmagnitude": 3.99
+    }
+  ],
+  "note": "Magnitude limits are applied by the ISC service; every magnitude reported for a selected event is kept and events are de-duplicated by ISC event id. Events after the ISC review cut-off are unreviewed.",
+  "num_events": 280614,
+  "num_magnitudes": 1206980
+}

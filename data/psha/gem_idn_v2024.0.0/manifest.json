@@ -1,0 +1,113 @@
+{
+  "name": "GEM OpenQuake input model for Indonesia (IDN)",
+  "model_version": "v2024.0.0",
+  "authors": "Team for Updating Seismic Hazard Maps of Indonesia (PuSGeN, Kementerian Pekerjaan Umum) and GEM Foundation",
+  "implementation": "GEM Foundation Hazard Team",
+  "license": "CC BY-NC-SA 4.0",
+  "source": "https://cloud.openquake.org/s/wCBESckQYgWgLqx",
+  "product_page": "https://www.globalquakemodel.org/product/indonesia-hazard",
+  "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf",
+  "snapshot_date": "2026-10-07",
+  "files": [
+    {
+      "path": "LICENSE",
+      "bytes": 2362,
+      "sha256": "634c92ab55d682d6ebbe68fd4f8fc9f29da24a8806170429493a501872048710"
+    },
+    {
+      "path": "README.md",
+      "bytes": 91,
+      "sha256": "2a90d34a0c870bf9029d24cdb7068e8a9957477c330a153f269dcbf379c99623"
+    },
+    {
+      "path": "in/gmmLT.xml",
+      "bytes": 3984,
+      "sha256": "204632dcee6fb397d53da1adf7a8a4d3160085120c028dde20f75ce1e4c544a3"
+    },
+    {
+      "path": "in/iid-10km.csv",
+      "bytes": 450437,
+      "sha256": "1ebfed023e605b49b50f02fc2b1d908b06034c24c56a1b09730982c92fe20cdb"
+    },
+    {
+      "path": "in/job_clean.ini",
+      "bytes": 2356,
+      "sha256": "9290b516b057841930ea9f559650d30448c95385fb590cb4d828b25b10f87a25"
+    },
+    {
+      "path": "in/lookup_reqv_asc.hdf5",
+      "bytes": 116512,
+      "sha256": "0cfd3d2d291e68d3cf2e4b87d81357dba88ca91ac040b3fa69141a79f0b271ff"
+    },
+    {
+      "path": "in/lookup_reqv_slb.hdf5",
+      "bytes": 116512,
+      "sha256": "8b817de4c1cac8fd4045c2a673b08a3d468a3126c89eb8211631eb75a637fa18"
+    },
+    {
+      "path": "in/ssm/crust/Indo_Faults_CH.xml",
+      "bytes": 540951,
+      "sha256": "d58b6397da30bca973b7ca502ab566b19096a84fc6a4c2914e9aac5b0f956ad0"
+    },
+    {
+      "path": "in/ssm/crust/Indo_Faults_GR.xml",
+      "bytes": 596122,
+      "sha256": "e4d9c6edce779f934ceb295c59131bcdbff99daf786c5dbb1fb2592b99cc20aa"
+    },
+    {
+      "path": "in/ssm/gridded/layer1.xml",
+      "bytes": 4269723,
+      "sha256": "068f6bc9dcc474b6be43a614727cb2302ee1c10fd64c73dd3d04054dea36e4fd"
+    },
+    {
+      "path": "in/ssm/gridded/layer2.xml",
+      "bytes": 4033633,
+      "sha256": "1073e25022aac6d0423b7583ad288853c3366c3f0d6f72993a95d634e47fdb30"
+    },
+    {
+      "path": "in/ssm/gridded/layer3.xml",
+      "bytes": 3133009,
+      "sha256": "20336dc2ed6aaa30558886a278d0c629e6c0c90754ed26a255b327263c9383c8"
+    },
+    {
+      "path": "in/ssm/gridded/layer4.xml",
+      "bytes": 2377506,
+      "sha256": "3e8c65a14edf1dbd05aa21b49573a2d243833c14d76a4ea8e7d43e0f4b20298e"
+    },
+    {
+      "path": "in/ssm/gridded/layer5.xml",
+      "bytes": 2025131,
+      "sha256": "92cf5c795d49277716aec2b0e3d1e80b73d36ccab238644ec85c200db428456b"
+    },
+    {
+      "path": "in/ssm/gridded/layer6.xml",
+      "bytes": 1674154,
+      "sha256": "15fd834496c072dd6fbd7a0d0e30ec9a59b4e4a6d3b782c5ae675a46fc0d8c70"
+    },
+    {
+      "path": "in/ssm/interface/Sub_Indo_CH_S1.xml",
+      "bytes": 16193,
+      "sha256": "3d922ef5a642f89085900dc3fcc51f6da746c74af82a81c4b6a15396a3c88ed4"
+    },
+    {
+      "path": "in/ssm/interface/Sub_Indo_CH_S2.xml",
+      "bytes": 14877,
+      "sha256": "fb3fee97ba63fecc11e2e24ebff8f59331775a3477253f8c3702fa2f4647e71b"
+    },
+    {
+      "path": "in/ssm/interface/Sub_Indo_GR_S1.xml",
+      "bytes": 32102,
+      "sha256": "0723b8245c50c9c635a7f89d7e3ace8fb4aaae44e17c592a0824cd7ecf93388f"
+    },
+    {
+      "path": "in/ssm/interface/Sub_Indo_GR_S2.xml",
+      "bytes": 27282,
+      "sha256": "9858d12e923913f8340b1c7ef296c7012fa8f856142d790d55a63b3aead969af"
+    },
+    {
+      "path": "in/ssmLT_clean.xml",
+      "bytes": 1762,
+      "sha256": "16d16243212024ba80b76693b8f8f7c4ad6635210db4b194364b54754698769a"
+    }
+  ]
+}

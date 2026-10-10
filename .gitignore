@@ -26,3 +26,18 @@ data/* - Copy.csv
 data/_batch.tmp
 .streamlit/*
 !.streamlit/secrets.toml.example
+
+# PSHA: lingkungan OpenQuake terpisah (Python >= 3.11) dan model GEM yang
+# diunduh ulang oleh scripts/download_gem_idn_model.py (diverifikasi SHA-256).
+.venv-oq/
+data/psha/gem_idn_v2017.1.0/in/
+data/psha/gem_idn_v2024.0.0/in/
+data/psha/results/*/export/
+data/psha/isc/parts/
+data/psha/isc/isc_events.csv
+data/psha/isc/isc_magnitudes.csv
+data/psha/isc/bmkg_isc_match.csv
+data/psha/iscgem/*.csv
+data/psha/iscgem/*.kmz
+data/psha/results/*/app_job.json
+data/psha/results/*/run.log

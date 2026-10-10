@@ -1,0 +1,30 @@
+PSHA input model for Indonesia
+Version v2024.0.0
+
+Copyright (C) 2026 Team for Updating Seismic Hazard Maps of Indonesia (The team belongs to the National Center for Earthquake Studies under the Directorate Engineering Affairs for Buildings and Environmental Health, Directorate General of Human Settlements, Ministry of Public Works. Ministries involved: Ministry of Public Works; Ministry of Energy and Mineral Resources; Ministry of Transportation; The Ministry of Higher Education, Science, and Technology; and National Disaster Management Authority of Indonesia. Organizations involved: Bureau of Meteorology, Climatology and Geophysics; The National Research and Innovation Agency; Geospatial Information Agency; Centre of Volcanology and Geological Hazard Mitigation; Indonesian Academy of Sciences; Bandung Institute of Technology; University of Indonesia; University of Gajah Mada; University of Diponegoro; November 10 Institute of Technology Surabaya; National Institute of Science and Technology; Indonesian Society for Geotechnical Engineering; and Indonesian Disaster Expert Association, Indonesian Society of Civil and Structural Engineers) and GEM Foundation 
+ 
+THE WORK IS PROTECTED BY COPYRIGHT AND/OR OTHER APPLICABLE LAW. INSOFAR AS THIS
+WORK IS PROTECTED BY LAWS THAT NEIGHBOUR OR ARE SIMILARLY RELATED TO COPYRIGHT, 
+SUCH AS DATABASE RIGHTS AS INTRODUCED IN EUROPE BY THE  DIRECTIVE 96/9/EC, YOU
+ALSO MAY USE THIS WORK UNDER THE TERMS OF CC BY-NC-SA 4.0. 
+SEE https://creativecommons.org/licenses/by-nc-sa/4.0/
+
+ANY USE OF THE WORK OTHER THAN AS AUTHORIZED UNDER THIS LICENSE OR
+DIRECTLY ALLOWED BY THE APPLICABLE LAW IS PROHIBITED.
+
+If you have any questions or if you wish to seek permission to use this data
+beyond what is offered by CC BY-NC-SA 4.0, please contact the GEM Foundation at
+licensing@globalquakemodel.org
+
+DISCLAIMER:
+The MODEL is released as an OpenQuake tailored implementation on behalf 
+of scientists and engineers working within the GEM Foundation (Global 
+Earthquake Model)
+
+The MODEL is provided WITHOUT ANY WARRANTY; without even the 
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. 
+The GEM Foundation, and the authors of the MODEL, assume no liability for 
+its use.
+ 
+For additional information, material and documentation please contact the 
+GEM hazard team: hazard@globalquakemodel.org 
