@@ -149,6 +149,7 @@ def _add_collapsible_legend_styles(earthquake_map: folium.Map) -> None:
             .map-legend-earthquake{left:10px;bottom:66px;}
             .map-legend-tectonic{right:10px;bottom:66px;}
             .map-legend-density{right:10px;top:54px;}
+            .map-legend-hazard{right:10px;top:54px;max-width:300px;}
             .map-legend-geology{left:10px;bottom:110px;max-width:440px;}
             .map-legend-subtitle{font-weight:600;margin:2px 0 6px;}
             .geology-legend-grid{display:grid;grid-template-columns:1fr 1fr;
@@ -370,6 +371,110 @@ def _add_population_density_legend(
           href="https://www.bps.go.id/" target="_blank" rel="noopener noreferrer"
           >Badan Pusat Statistik (BPS)</a>{year_label}; tabel dan publikasi
           kabupaten/kota.</div>
+      </div>
+    </details>
+    """
+    earthquake_map.get_root().html.add_child(folium.Element(legend_html))
+
+
+HAZARD_LAYER_NAME = "Bahaya Gempa (PSHA)"
+
+
+def zoom_to_fit(
+    bounds: tuple[float, float, float, float],
+    width_px: int,
+    height_px: int,
+    max_zoom: int = 12,
+) -> int:
+    """Largest Web Mercator zoom showing ``(west, south, east, north)`` whole.
+
+    Computed up front because ``fitBounds`` on a map rendered inside a hidden
+    Streamlit tab sees a zero-sized container and jumps to the maximum zoom.
+    """
+    west, south, east, north = bounds
+
+    def mercator_y(lat: float) -> float:
+        return math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
+
+    lon_fraction = max(east - west, 1e-6) / 360
+    lat_fraction = max(mercator_y(north) - mercator_y(south), 1e-6) / (2 * math.pi)
+    zoom = min(math.log2(width_px / 256 / lon_fraction),
+               math.log2(height_px / 256 / lat_fraction))
+    return max(1, min(max_zoom, math.floor(zoom)))
+
+
+def hazard_image_data_url(
+    classes: np.ndarray,
+    bounds: tuple[float, float, float, float],
+    colors: Collection[str],
+    *,
+    pixels_per_cell: int = 4,
+    alpha: int = 215,
+) -> str:
+    """PNG of a classified north-up lon/lat grid, resampled to Web Mercator rows.
+
+    Leaflet stretches an image overlay linearly in Mercator space, so rows are
+    sampled at equal Mercator steps to keep every cell at its true latitude.
+    Cells with class -1 (no site) are transparent.
+    """
+    _, south, _, north = bounds
+    row_count, col_count = classes.shape
+    height, width = row_count * pixels_per_cell, col_count * pixels_per_cell
+
+    def mercator(lat: np.ndarray) -> np.ndarray:
+        return np.log(np.tan(np.pi / 4 + np.radians(lat) / 2))
+
+    y = np.linspace(mercator(np.array(north)), mercator(np.array(south)), height + 1)
+    row_lat = np.degrees(2 * np.arctan(np.exp((y[:-1] + y[1:]) / 2)) - np.pi / 2)
+    rows = np.clip(((north - row_lat) / (north - south) * row_count).astype(int), 0, row_count - 1)
+    cols = np.arange(width) // pixels_per_cell
+    sampled = classes[rows][:, cols]
+    palette = np.asarray([ImageColor.getrgb(color) for color in colors], dtype=np.uint8)
+    rgba = np.zeros((height, width, 4), dtype=np.uint8)
+    valid = sampled >= 0
+    rgba[valid, :3] = palette[sampled[valid]]
+    rgba[valid, 3] = alpha
+    buffer = BytesIO()
+    Image.fromarray(rgba).save(buffer, format="PNG", optimize=True)
+    return "data:image/png;base64," + base64.b64encode(buffer.getvalue()).decode("ascii")
+
+
+def add_hazard_layer(
+    earthquake_map: folium.Map,
+    classes: np.ndarray,
+    bounds: tuple[float, float, float, float],
+    colors: Collection[str],
+    legend_labels: Collection[str],
+    *,
+    title: str,
+    subtitle: str,
+    source_html: str,
+) -> None:
+    """Add a classified PSHA hazard raster below the tectonic lines, with legend."""
+    west, south, east, north = bounds
+    hazard_layer = folium.FeatureGroup(name=HAZARD_LAYER_NAME, show=True)
+    folium.raster_layers.ImageOverlay(
+        image=hazard_image_data_url(classes, bounds, colors),
+        bounds=[[south, west], [north, east]],
+        opacity=1.0,
+        interactive=False,
+        cross_origin=False,
+        pane="hazardPane",
+        zindex=1,
+    ).add_to(hazard_layer)
+    hazard_layer.add_to(earthquake_map)
+    rows = "".join(
+        '<div class="density-legend-row">'
+        f'<span style="background:{color}"></span>{escape(label)}</div>'
+        for color, label in zip(colors, legend_labels)
+    )
+    legend_html = f"""
+    <details class="map-legend map-legend-hazard" open>
+      <summary>{escape(title)}</summary>
+      <div class="map-legend-body">
+        <div class="map-legend-subtitle">{escape(subtitle)}</div>
+        <div class="density-legend-grid">{rows}</div>
+        <div class="density-legend-source">{source_html}</div>
       </div>
     </details>
     """
@@ -683,6 +788,10 @@ def _add_thematic_panes(earthquake_map: folium.Map) -> None:
             || {{ this._parent.get_name() }}.createPane('geologyPane');
         geologyPane.style.zIndex = 340;
         geologyPane.style.pointerEvents = 'none';
+        var hazardPane = {{ this._parent.get_name() }}.getPane('hazardPane')
+            || {{ this._parent.get_name() }}.createPane('hazardPane');
+        hazardPane.style.zIndex = 345;
+        hazardPane.style.pointerEvents = 'none';
         var populationDensityPane = {{ this._parent.get_name() }}.getPane('populationDensityPane')
             || {{ this._parent.get_name() }}.createPane('populationDensityPane');
         populationDensityPane.style.zIndex = 350;

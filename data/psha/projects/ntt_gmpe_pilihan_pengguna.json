@@ -1,0 +1,86 @@
+{
+  "id": "ntt_gmpe_pilihan_pengguna",
+  "name": "NTT – GMPE pilihan pengguna",
+  "created_utc": "2026-10-10T03:38:36+00:00",
+  "updated_utc": "2026-10-10T03:38:56+00:00",
+  "region": {
+    "provinces": [
+      "Nusa Tenggara Timur"
+    ],
+    "spacing": 0.2,
+    "vs30": 760.0
+  },
+  "source_model": {
+    "kind": "gem",
+    "version": "v2024.0.0",
+    "trts": [
+      "Active Shallow Crust",
+      "Subduction Interface",
+      "Subduction Intraslab"
+    ]
+  },
+  "gmpe_logic_tree": {
+    "Active Shallow Crust": [
+      {
+        "gmpe": "BooreEtAl2014",
+        "weight": 0.34
+      },
+      {
+        "gmpe": "CampbellBozorgnia2014",
+        "weight": 0.33
+      },
+      {
+        "gmpe": "ChiouYoungs2014",
+        "weight": 0.33
+      }
+    ],
+    "Subduction Interface": [
+      {
+        "gmpe": "AbrahamsonGulerce2020SInter",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "ParkerEtAl2020SInter",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "KuehnEtAl2020SInter",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "ZhaoEtAl2006SInter",
+        "weight": 0.25
+      }
+    ],
+    "Subduction Intraslab": [
+      {
+        "gmpe": "AbrahamsonGulerce2020SSlab",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "ParkerEtAl2020SSlab",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "KuehnEtAl2020SSlab",
+        "weight": 0.25
+      },
+      {
+        "gmpe": "ZhaoEtAl2006SSlab",
+        "weight": 0.25
+      }
+    ]
+  },
+  "notes": {
+    "region": "Wilayah uji pilihan pengguna: NTT (semua tatanan tektonik hadir). Grid 0,2° (102 situs).",
+    "source": "Tahap A: model sumber GEM IDN v2024 (PuSGeN 2024), sesuai keputusan bertahap pengguna.",
+    "gmpe": "Dipilih pengguna setelah melihat trellis skenario NTT: kerak dangkal NGA-West2 tiga (BSSA14, CB14, CY14); megathrust dan intraslab NGA-Sub versi global + Zhao 2006 (tanpa penyesuaian regional Cascadia, yang ~3x lebih rendah untuk AG20); bobot sama rata."
+  },
+  "confirmed": {
+    "region": "2026-10-10T03:38:36+00:00",
+    "source": "2026-10-10T03:38:36+00:00",
+    "gmpe": "2026-10-10T03:38:36+00:00",
+    "review": "2026-10-10T03:38:56+00:00"
+  },
+  "run_id": "ntt_gmpe_pilihan_pengguna_run1"
+}

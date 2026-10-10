@@ -423,3 +423,226 @@ bukan hanya peta. Jarak dihitung sebagai jarak permukaan 2D ke ruas pantai
 terdekat (mesin yang sama dengan filter jarak ke sesar) dan **bukan** penentu
 penyebab gempa. Wilayah tanpa pantai laut (mis. Kota Palembang di tepi Sungai
 Musi) tidak memunculkan slider.
+
+## Bahaya Gempa Probabilistik (PSHA)
+
+Tab **Bahaya Gempa (PSHA)** menampilkan peta bahaya yang dihitung dengan
+OpenQuake engine. Aplikasi membaca hasil di `data/psha/results/<run_id>/`
+(`utils/psha_results.py`). Bila lingkungan `.venv-oq` tersedia, bagian
+**Hitung PSHA wilayah baru** di tab tersebut meluncurkan `scripts/run_psha.py`
+sebagai proses latar (`utils/psha_jobs.py`): pilih provinsi (atau seluruh
+Indonesia) dan jarak grid 0,1/0,2/0,25/0,5°. Folder run berisi tambahan
+`app_job.json` (pid, wilayah, perkiraan waktu) dan `run.log`; run baru muncul di
+daftar hasil setelah `manifest.json` ditulis. Hasil yang hilang atau tidak konsisten menimbulkan `PSHAResultError`;
+tidak ada nilai hazard yang diinterpolasi atau dibuat sintetis.
+
+### Model sumber: GEM IDN v2024.0.0 (default)
+
+- Folder: `psha/gem_idn_v2024.0.0/` (`manifest.json` mencatat URL dan SHA-256;
+  isi `job.zip` diekstrak ke `in/`, yang tidak disimpan di Git)
+- Model: Peta Sumber dan Bahaya Gempa Indonesia 2024 (PuSGeN, Kementerian PU)
+  sebagaimana diimplementasikan GEM untuk mosaik 2026. Sumber: 6 lapisan grid
+  kegempaan, megathrust (dua skenario segmentasi S1/S2, bobot 0,9/0,1, masing-
+  masing MFD Gutenberg-Richter + karakteristik), sesar dangkal (GR + karakteristik).
+  GMPE: BSSA14/CB14/CY14 (kerak), Abrahamson-Gulerce 2020, Zhao 2006, Kuehn 2020
+  (interface dan intraslab), dan cabang kerak samudra.
+- Sumber: https://cloud.openquake.org/s/wCBESckQYgWgLqx
+- Lisensi: **CC BY-NC-SA 4.0**. Hanya untuk penggunaan **non-komersial**, atribusi
+  wajib, turunan memakai lisensi yang sama.
+- Pengaturan job GEM yang diikuti `scripts/run_psha.py --model v2024.0.0`: jarak
+  maksimum 1000 km untuk interface dan 300 km lainnya, `complex_fault_mesh_spacing`
+  20 km, `use_rates`, z1.0/z2.5 diturunkan GMPE dari Vs30. Yang tidak diikuti:
+  `ps_grid_spacing = 50` (dimatikan karena bias −4 sampai −7%) dan Vs30 per situs
+  (`iid-10km.csv`); aplikasi memakai batuan referensi Vs30 760 m/s.
+- Pengunduh: `python scripts/download_gem_idn_model.py` (`--verify` untuk
+  memeriksa SHA-256)
+
+### Model sumber: GEM IDN v2017.1.0
+
+- Folder: `psha/gem_idn_v2017.1.0/` (`manifest.json` mencatat URL dan SHA-256
+  ke-15 berkas; folder `in/` tidak disimpan di Git dan diunduh ulang)
+- Model: Irsyam dkk. (2017), *Peta Sumber dan Bahaya Gempa Indonesia 2017*
+  (PuSGeN), diimplementasikan penuh di OpenQuake oleh GEM Foundation
+- Sumber: https://cloud.openquake.org/s/zsoZY55oe2gSwFZ (halaman produk
+  https://www.globalquakemodel.org/product/indonesia-hazard)
+- Dokumentasi: https://hazard.openquake.org/gem/pdf/idn-report.pdf
+- Lisensi: **CC BY-SA 4.0** — atribusi wajib; turunan memakai lisensi yang sama
+- Tanggal snapshot: 2026-10-05
+- Pengunduh: `python scripts/download_gem_idn_model.py --version v2017.1.0`
+  (`--verify` untuk memeriksa SHA-256); run memakai `--model v2017.1.0`
+
+Inventaris sumber v2017 (`psha/gem_idn_inventory.csv`, ringkasan
+`psha/gem_idn_inventory_summary.json`, dibuat oleh
+`scripts/inventory_gem_idn_model.py` dengan parser NRML OpenQuake):
+
+| Berkas | Tatanan tektonik | Tipe | Isi |
+| --- | --- | --- | --- |
+| `ssm/sub/Indonesia_Sub.xml` | Subduction Interface | Complex fault | 13 segmen megathrust, Mmax 7,8–9,2, kedalaman 5–50 km |
+| `ssm/crust/Indonesia_Crustal_faults.xml` | Active Shallow Crust | Simple fault | 251 sesar; kedalaman seismogenik umumnya 0–15/17/20 km |
+| `ssm/shallow_grid/layer1–2.xml` | Active Shallow Crust | Multi-point (0,1°) | Kegempaan latar, hiposenter 12,6 dan 37,6 km, M 4,0–6,45 |
+| `ssm/deep_grid/layer1–4.xml` | Subduction Inslab | Multi-point (0,1°) | Intraslab, hiposenter 60, 125, 175, 200 km, M ≤ 7,75 |
+
+Logic tree GMPE (rerata tertimbang): Active Shallow Crust — BSSA14, CB14,
+CY14, Cauzzi 2014, Zhao 2006 (masing-masing 0,2); Interface dan Inslab —
+Abrahamson 2015, Parker 2020, Zhao 2006, Kuehn 2020 (masing-masing 0,25).
+
+### Menjalankan perhitungan
+
+OpenQuake 3.26 membutuhkan Python ≥ 3.11 dan berlisensi AGPL-3.0, sehingga
+dipasang di lingkungan terpisah `.venv-oq` (tidak ikut `requirements.txt` dan
+tidak dibundel ke build desktop). Di Windows, GDAL tidak punya wheel PyPI;
+gunakan daftar wheel resmi GEM:
+
+```powershell
+uv venv --python 3.12 .venv-oq
+uv pip install --python .venv-oq\Scripts\python.exe -r https://raw.githubusercontent.com/gem/oq-engine/engine-3.26/requirements-py312-win64.txt
+uv pip install --python .venv-oq\Scripts\python.exe --no-deps openquake.engine==3.26.2
+$env:OQ_DATADIR = "D:\oqdata"   # datastore OpenQuake bisa berukuran GB
+.venv-oq\Scripts\python.exe scripts\run_psha.py --run-id jabar_0p1 --provinces "Jawa Barat" "Banten" "DKI Jakarta"
+```
+
+Run dibuat per wilayah dengan `--provinces`. Tanpa opsi itu seluruh Indonesia
+dihitung: grid 0,2° (±3.900 situs) diperkirakan 3–4 jam dan grid 0,1°
+(±15.400 situs) ±14 jam pada laptop di bawah.
+
+`scripts/run_psha.py` membuat grid situs daratan (kelipatan spasi, di dalam
+poligon `provinsi_indonesia_38.geojson`), menulis `job.ini` yang memakai
+berkas model GEM apa adanya, menjalankan OpenQuake, lalu menyimpan:
+
+- `hazard_map.csv` — `lon`, `lat`, satu kolom per `<IMT>-<poe>` (g)
+- `hazard_curves-<IMT>.csv` — `lon`, `lat`, `poe-<level>` (peluang terlampaui dalam 50 tahun)
+- `sites.csv`, `job.ini`, `manifest.json` (versi OpenQuake, model, wilayah,
+  Vs30, waktu hitung, SHA-256 keluaran)
+
+Parameter: PGA, SA(0,2) dan SA(1,0); 10% dan 2% dalam 50 tahun (475 dan
+2475 tahun); Vs30 referensi 760 m/s (`--vs30` untuk mengubah; GEM memakai
+800 m/s); z1.0 = 30 m, z2.5 = 0,57 km; truncation level 5; jarak maksimum
+300 km; `pointsource_distance` 200 km, sama dengan job GEM. Berkas situs GEM
+(`sites_idn_res6.csv`) tidak termasuk dalam distribusi, sehingga situs dibuat
+sendiri.
+
+Uji percepatan `--ps-grid-spacing 50` pada area Jawa Barat menurunkan nilai
+hazard secara sistematis 4–7% (maksimum 13%) dengan percepatan hanya ~1,7×,
+sehingga run yang disimpan memakai perhitungan penuh tanpa opsi ini.
+
+| Run | Wilayah | Spasi | Situs | Waktu hitung* |
+| --- | --- | --- | ---: | ---: |
+| `jabar_0p1` | Jawa Barat, Banten, DKI Jakarta | 0,1° | 382 | 20,6 menit |
+
+\*Laptop 12 core, RAM 16 GB.
+
+### Validasi terhadap SNI 1726:2019 (RSA Cipta Karya)
+
+`scripts/compare_psha_rsa.py --run-id <run>` mengambil nilai SNI 1726:2019
+(model PuSGeN 2017) per koordinat dari aplikasi RSA Cipta Karya
+(https://rsa.ciptakarya.pu.go.id/2021/, formulir `process.php`, satu permintaan
+per 1,5 detik) untuk situs pada kisi `--step` derajat ditambah kota kontrol, lalu
+menulis `validation_rsa.csv` dan `validation_rsa.json` ke folder run. Yang
+dibandingkan hanya PGA: PGA SNI adalah MCE_G (rerata geometrik, 2% dalam
+50 tahun, kelas situs SB), sedangkan Ss/S1 adalah MCE_R *risk-targeted* arah
+maksimum sehingga hanya disimpan sebagai referensi.
+
+Hasil `jabar_0p1` (48 situs, diambil 2026-10-06): rasio PGA 2475 tahun run ini
+terhadap PGA SNI bermedian **1,17** (P10–P90 1,06–1,22; min 0,90, maks 1,40;
+38 situs dalam ±20%). Run ini sistematis lebih tinggi karena:
+
+- GEM v2017.1.0 memperbarui logic tree GMPE (changelog dokumentasi GEM),
+  antara lain dengan Parker 2020 dan Kuehn 2020, sehingga tidak identik dengan
+  GMPE peta PuSGeN 2017 asli;
+- RSA memberi nilai yang sama persis 0,600 g di beberapa situs pantai selatan
+  (lokasi rasio terbesar), yang menandakan batas/plafon pada peta SNI;
+- Vs30 760 m/s dipakai sebagai wakil kelas SB.
+
+Panel **Validasi terhadap SNI 1726:2019** di tab PSHA menampilkan ringkasan dan
+tabel ini bila berkasnya ada.
+
+### Peta Publikasi
+
+Tab **Peta Publikasi** memiliki toggle **Layer bahaya gempa (PSHA)** (pilih run,
+parameter, dan periode ulang). Raster disampel per piksel peta pada proyeksi
+Web Mercator (`utils/publication_map._render_hazard_overlay`), digambar di bawah
+garis sesar/trench, dengan legenda kelas di sidebar dan baris sumber model
+(PuSGeN 2017 via GEM IDN, CC BY-SA 4.0) pada daftar sumber data. Bila titik gempa
+dimatikan dan tidak ada wilayah/kotak terpilih, cakupan peta mengikuti batas run
+PSHA.
+
+Nilai yang ditampilkan adalah peta bahaya *uniform hazard* (rerata logic tree)
+pada batuan referensi. Nilai ini **bukan** pengganti parameter desain SNI
+1726:2019 (Ss/S1 adalah MCE_R *risk-targeted*); PGA 2475 tahun dapat
+dibandingkan dengan PGA (MCE_G) SNI pada kelas situs SB sebagai pemeriksaan.
+
+### Buletin ISC dan homogenisasi magnitudo (Fase 2, Step 5)
+
+- Folder: `psha/isc/`. `manifest.json`, `magnitude_conversion_summary.json`, dan
+  kedua PNG disimpan di Git; CSV besar (`isc_events.csv`, `isc_magnitudes.csv`,
+  `bmkg_isc_match.csv`, `parts/`) tidak, dan dibuat ulang oleh skrip.
+- Sumber: ISC FDSN event service, `includeallmagnitudes=true`, wilayah lat
+  -11,5..6,5 dan lon 94,5..141,5. Tiga tahap: 1904–2008-10 semua magnitudo,
+  2008-11–sekarang M ≥ 4, dan 2008-11–sekarang M < 4. Total 280.614 event dan
+  1.206.980 magnitudo (snapshot 2026-10-10).
+- Sitasi: International Seismological Centre (2026), On-line Bulletin,
+  https://doi.org/10.31905/D808B830. Bebas dipakai dengan sitasi.
+- Pengunduh: `python scripts/download_isc_bulletin.py`. Unduhannya bisa
+  dilanjutkan, memakai jeda 15 detik, dan menunggu bila ISC membalas HTTP 429.
+- Pencocokan dan regresi: `.venv-oq\Scripts\python.exe scripts/match_bmkg_isc.py`
+  (dijalankan di `.venv-oq` agar grafik matplotlib ikut dibuat).
+  - Pencocokan memakai origin BMKG (DJA) di buletin ISC (≤5 detik, ≤50 km); bila
+    tidak ada, origin utama ISC (≤16 detik, ≤100 km).
+  - Mw acuan: GCMT > NEIC Mww > NEIC Mw lain > GFZ > lembaga lain. Mwp, Mw(mB),
+    dan Mw BMKG sendiri tidak dipakai sebagai acuan.
+  - Regresi General Orthogonal Regression (η = 1), per tipe magnitudo katalog
+    BMKG dan per tipe di dalam buletin ISC (DJA, ISC mb, ISC MS, NEIC mb).
+- **Batasan:** Mw acuan praktis hanya ada untuk M ≳ 4,8 (persentil 5% = 4,79),
+  sehingga regresi terpotong di bagian bawah dan konversi di bawah ±M 4,8
+  adalah ekstrapolasi. Gunakan persamaan hanya di dalam `valid_range` dan
+  perlakukan konversi magnitudo kecil dengan hati-hati.
+
+### Katalog ISC-GEM v12.1
+
+- Folder: `psha/iscgem/` (`isc-gem-cat.csv`, `isc-gem-suppl.csv`,
+  `isc-gem-cat.kmz`). File-file ini tidak disimpan di Git. Mintalah lewat
+  formulir (dengan CAPTCHA) di http://www.isc.ac.uk/iscgem/request_catalogue.php,
+  lalu salin ke folder ini.
+- Isi: katalog instrumental global 1904–2021 dengan Mw homogen. Kolom `s`
+  (`mw_src`) bernilai `d` bila Mw dihitung dari momen seismik (GCMT atau
+  literatur), atau `p` bila Mw adalah proxy hasil konversi MS/mb oleh ISC-GEM.
+  Suplemen berisi event yang lokasi atau magnitudonya kurang andal (kualitas D).
+- Wilayah katalog BMKG: 8.124 event di katalog utama (1905–2021; 6.111 `d`,
+  2.013 `p`) dan 723 di suplemen. 99,6% event memiliki `eventid` yang sama
+  dengan event ISC di `psha/isc/`.
+- Pembaca: `utils/iscgem.py`. Di `scripts/match_bmkg_isc.py`, Mw `d` dari
+  katalog utama menjadi Mw acuan prioritas kedua setelah GCMT. Mw proxy tidak
+  dipakai sebagai acuan regresi agar tidak melingkar, tetapi tetap tersedia
+  untuk katalog Mw gabungan.
+- Lisensi: CC BY-SA 3.0. Sitasi: International Seismological Centre (2025),
+  ISC-GEM Earthquake Catalogue, https://doi.org/10.31905/D808B825, ditambah
+  Storchak dkk. (2013, 2015) dan Di Giacomo dkk. (2018). Untuk parameter
+  magnitudo, sitasi juga Di Giacomo dkk. (2015a).
+
+### Wizard "Bangun Model PSHA" (GMPE dan logic tree pilihan pengguna)
+
+Tab **Bangun Model PSHA** (`psha_wizard.py`) memandu pembuatan PSHA langkah
+demi langkah. Setiap langkah menjelaskan apa yang diputuskan dan harus
+dikonfirmasi sebelum langkah berikutnya terbuka. Mengubah langkah yang sudah
+dikonfirmasi membatalkan konfirmasi langkah-langkah sesudahnya.
+
+1. **Wilayah dan kondisi situs**: provinsi, jarak grid, dan Vs30 760 m/s.
+   Ditampilkan jumlah situs, peta titik, dan perkiraan waktu hitung.
+2. **Model sumber gempa**: Tahap A memakai model sumber GEM IDN v2024 atau
+   v2017 (isi berkas dan tatanan tektoniknya ditampilkan). Tahap B (model
+   sumber sendiri dari katalog) akan ditambahkan.
+3. **GMPE dan logic tree**: kandidat per tatanan tektonik beserta data asal,
+   rentang M/jarak, dan siapa yang memakainya (`utils/gmpe_catalog.py`).
+   Tersedia preset GEM v2024/v2017, bobot sama rata, validasi (jumlah bobot,
+   GMPE tunggal, varian ganda), dan grafik **trellis** (median vs jarak) yang
+   dihitung oleh `scripts/gmpe_trellis.py` di `.venv-oq`.
+4. **Tinjau dan hitung**: ringkasan semua pilihan, jumlah realisasi, perkiraan
+   waktu, peringatan RAM (OpenQuake perlu < 80%), kotak centang "sudah meninjau",
+   lalu peluncuran `scripts/run_psha.py --gmm-lt-json ...`. Logic tree ditulis
+   ke `gmmLT.xml` di folder run dan dicatat di `manifest.json`
+   (`gmpe_logic_tree`).
+5. **Hasil**: ringkasan nilai per parameter dan perbandingan rasio dengan run
+   lain di wilayah dan grid yang sama.
+
+Proyek disimpan di `psha/projects/<id>.json` (`utils/psha_project.py`): pilihan
+per langkah, catatan alasan pengguna, waktu konfirmasi, dan `run_id`.

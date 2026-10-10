@@ -1,0 +1,98 @@
+{
+  "ssm/crust/Indonesia_Crustal_faults.xml": {
+    "tectonic_regions": [
+      "Active Shallow Crust"
+    ],
+    "source_types": [
+      "SimpleFaultSource"
+    ],
+    "num_sources": 251,
+    "num_points": 251,
+    "max_mag": 8.375,
+    "total_rate_above_min_mag": 2.2113
+  },
+  "ssm/sub/Indonesia_Sub.xml": {
+    "tectonic_regions": [
+      "Subduction Interface"
+    ],
+    "source_types": [
+      "ComplexFaultSource"
+    ],
+    "num_sources": 13,
+    "num_points": 13,
+    "max_mag": 9.2,
+    "total_rate_above_min_mag": 3.5463
+  },
+  "ssm/shallow_grid/layer1.xml": {
+    "tectonic_regions": [
+      "Active Shallow Crust"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 59297,
+    "max_mag": 6.45,
+    "total_rate_above_min_mag": 83.2715
+  },
+  "ssm/shallow_grid/layer2.xml": {
+    "tectonic_regions": [
+      "Active Shallow Crust"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 60745,
+    "max_mag": 6.45,
+    "total_rate_above_min_mag": 189.5532
+  },
+  "ssm/deep_grid/layer1.xml": {
+    "tectonic_regions": [
+      "Subduction Inslab"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 44532,
+    "max_mag": 7.75,
+    "total_rate_above_min_mag": 16.3363
+  },
+  "ssm/deep_grid/layer2.xml": {
+    "tectonic_regions": [
+      "Subduction Inslab"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 33929,
+    "max_mag": 7.75,
+    "total_rate_above_min_mag": 10.1334
+  },
+  "ssm/deep_grid/layer3.xml": {
+    "tectonic_regions": [
+      "Subduction Inslab"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 25268,
+    "max_mag": 7.75,
+    "total_rate_above_min_mag": 6.6257
+  },
+  "ssm/deep_grid/layer4.xml": {
+    "tectonic_regions": [
+      "Subduction Inslab"
+    ],
+    "source_types": [
+      "MultiPointSource"
+    ],
+    "num_sources": 1,
+    "num_points": 23057,
+    "max_mag": 7.75,
+    "total_rate_above_min_mag": 4.7966
+  }
+}

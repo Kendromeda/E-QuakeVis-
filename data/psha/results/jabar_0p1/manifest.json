@@ -1,0 +1,51 @@
+{
+  "run_id": "jabar_0p1",
+  "created_utc": "2026-10-05T23:53:10+00:00",
+  "openquake_version": "3.26.2",
+  "model": {
+    "name": "GEM OpenQuake input model for Indonesia (IDN)",
+    "model_version": "v2017.1.0",
+    "authors": "Irsyam, M., Faizal, L., Natawidjaja, D., Meilano, I., Widiyantoro, S., Triyoso, W., Rudiyanto, A., Hidayati, S., Asrurifak, M., Ridwan, M., Cummins, P.",
+    "license": "CC BY-SA 4.0",
+    "source": "https://cloud.openquake.org/s/zsoZY55oe2gSwFZ",
+    "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf"
+  },
+  "region": {
+    "provinces": [
+      "Jawa Barat",
+      "Banten",
+      "DKI Jakarta"
+    ],
+    "spacing_degrees": 0.1
+  },
+  "num_sites": 382,
+  "site_condition": {
+    "vs30_m_s": 760.0,
+    "vs30_type": "measured",
+    "z1pt0_m": 30.0,
+    "z2pt5_km": 0.57
+  },
+  "investigation_time_years": 50.0,
+  "poes": [
+    0.1,
+    0.02
+  ],
+  "return_periods_years": [
+    475,
+    2475
+  ],
+  "imts": [
+    "PGA",
+    "SA(0.2)",
+    "SA(1.0)"
+  ],
+  "statistic": "mean over the full GMPE logic tree",
+  "units": "g",
+  "runtime_seconds": 1237,
+  "outputs": {
+    "hazard_map.csv": "a8bdc345dd84436f66b80979f8be7eea96b023593f1ccf89e59f2f41aef31ecf",
+    "hazard_curves-PGA.csv": "2af11a06bcaa6b358e989d68be2f0c66b76cd64f8efafbcc0d935c4a27acf0c3",
+    "hazard_curves-SA(0.2).csv": "0e7402b9ca4770949f826fa9ccbf42f676d49e334e22b33d168ef78bb00c5ade",
+    "hazard_curves-SA(1.0).csv": "6da7a892244db913f41de961c830c531879e3aa7fa5169a07a17622a4abd338a"
+  }
+}

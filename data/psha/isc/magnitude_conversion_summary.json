@@ -1,0 +1,330 @@
+{
+  "created_utc": "2026-10-10T02:43:51+00:00",
+  "bmkg_events": 146626,
+  "bmkg_excluded_non_earthquake": 3077,
+  "isc_events": 280614,
+  "isc_years": [
+    1904,
+    2026
+  ],
+  "isc_events_with_reference_mw": 8637,
+  "isc_events_reference_mw_by_agency": {
+    "GCMT": 8208,
+    "GFZ": 116,
+    "AUST": 104,
+    "ISC-GEM": 79,
+    "NEIC": 57,
+    "P&S": 44,
+    "CSEM": 18,
+    "IPGP": 9,
+    "NIED": 1,
+    "NDI": 1
+  },
+  "iscgem_rows": {
+    "Mw": 6306,
+    "Mw(proxy)": 2263
+  },
+  "matched": 115172,
+  "matched_on": {
+    "DJA": 107733,
+    "prime": 7439
+  },
+  "with_reference_mw": 3757,
+  "reference_mw_agency": {
+    "GCMT": 3565,
+    "GFZ": 89,
+    "NEIC": 46,
+    "AUST": 43,
+    "CSEM": 7,
+    "IPGP": 6,
+    "NDI": 1
+  },
+  "by_bmkg_type": {
+    "M": {
+      "events": 66416,
+      "matched": 53515,
+      "with_mw_ref": 587
+    },
+    "ML": {
+      "events": 239,
+      "matched": 108,
+      "with_mw_ref": 0
+    },
+    "MLv": {
+      "events": 71003,
+      "matched": 53344,
+      "with_mw_ref": 123
+    },
+    "Mjma": {
+      "events": 8,
+      "matched": 4,
+      "with_mw_ref": 0
+    },
+    "Mw": {
+      "events": 694,
+      "matched": 685,
+      "with_mw_ref": 421
+    },
+    "Mw(Mwp)": {
+      "events": 7,
+      "matched": 7,
+      "with_mw_ref": 6
+    },
+    "Mw(mB)": {
+      "events": 2325,
+      "matched": 2262,
+      "with_mw_ref": 1695
+    },
+    "Mwp": {
+      "events": 6,
+      "matched": 5,
+      "with_mw_ref": 4
+    },
+    "mB": {
+      "events": 13,
+      "matched": 13,
+      "with_mw_ref": 7
+    },
+    "mb": {
+      "events": 5236,
+      "matched": 5090,
+      "with_mw_ref": 909
+    },
+    "nan": {
+      "events": 679,
+      "matched": 139,
+      "with_mw_ref": 5
+    }
+  },
+  "untyped_M_resolved_by_dja_value": {
+    "MLv": 28241,
+    "MLv/Mjma": 2458,
+    "MLv/mb": 986,
+    "mb": 835,
+    "M/MLv": 292,
+    "Mjma": 267,
+    "ML/MLv": 238,
+    "M": 117,
+    "M/MLv/mb": 20,
+    "MLv/Mjma/mb": 18
+  },
+  "conversions_gor_eta_1": {
+    "M": {
+      "pairs": 587,
+      "equation": "Mw = 0.845 * M + 0.770",
+      "slope": 0.8446,
+      "intercept": 0.7697,
+      "sigma": 0.207,
+      "valid_range": [
+        2.55,
+        7.29
+      ],
+      "mean_difference_mw_minus_m": -0.012
+    },
+    "MLv": {
+      "pairs": 123,
+      "equation": "Mw = 0.420 * MLv + 2.824",
+      "slope": 0.4203,
+      "intercept": 2.8245,
+      "sigma": 0.224,
+      "valid_range": [
+        3.31,
+        6.17
+      ],
+      "mean_difference_mw_minus_m": -0.055
+    },
+    "Mw": {
+      "pairs": 421,
+      "equation": "Mw = 0.968 * Mw + 0.232",
+      "slope": 0.9684,
+      "intercept": 0.2318,
+      "sigma": 0.112,
+      "valid_range": [
+        4.41,
+        7.23
+      ],
+      "mean_difference_mw_minus_m": 0.063
+    },
+    "Mw(Mwp)": {
+      "pairs": 6
+    },
+    "Mw(mB)": {
+      "pairs": 1695,
+      "equation": "Mw = 0.938 * Mw(mB) + 0.357",
+      "slope": 0.938,
+      "intercept": 0.3566,
+      "sigma": 0.19,
+      "valid_range": [
+        4.44,
+        8.43
+      ],
+      "mean_difference_mw_minus_m": 0.023
+    },
+    "Mwp": {
+      "pairs": 4
+    },
+    "mB": {
+      "pairs": 7
+    },
+    "mb": {
+      "pairs": 909,
+      "equation": "Mw = 0.956 * mb + 0.153",
+      "slope": 0.9564,
+      "intercept": 0.1528,
+      "sigma": 0.201,
+      "valid_range": [
+        4.43,
+        6.65
+      ],
+      "mean_difference_mw_minus_m": -0.072
+    }
+  },
+  "isc_internal_conversions_gor_eta_1": {
+    "DJA MLv": {
+      "pairs": 3440,
+      "equation": "Mw = 0.857 * DJA MLv + 0.476",
+      "slope": 0.8574,
+      "intercept": 0.4762,
+      "sigma": 0.243,
+      "valid_range": [
+        2.55,
+        8.03
+      ],
+      "mean_difference_mw_minus_m": -0.318
+    },
+    "DJA mb": {
+      "pairs": 4145,
+      "equation": "Mw = 1.212 * DJA mb + -1.218",
+      "slope": 1.2118,
+      "intercept": -1.2181,
+      "sigma": 0.269,
+      "valid_range": [
+        4.31,
+        7.29
+      ],
+      "mean_difference_mw_minus_m": -0.082
+    },
+    "DJA mB": {
+      "pairs": 3475,
+      "equation": "Mw = 1.180 * DJA mB + -1.430",
+      "slope": 1.18,
+      "intercept": -1.4297,
+      "sigma": 0.198,
+      "valid_range": [
+        4.71,
+        7.76
+      ],
+      "mean_difference_mw_minus_m": -0.408
+    },
+    "DJA ML": {
+      "pairs": 88,
+      "equation": "Mw = 0.947 * DJA ML + -0.066",
+      "slope": 0.9473,
+      "intercept": -0.0663,
+      "sigma": 0.359,
+      "valid_range": [
+        4.9,
+        7.5
+      ],
+      "mean_difference_mw_minus_m": -0.367
+    },
+    "DJA M": {
+      "pairs": 65,
+      "equation": "Mw = 0.950 * DJA M + 0.256",
+      "slope": 0.9503,
+      "intercept": 0.2564,
+      "sigma": 0.224,
+      "valid_range": [
+        4.74,
+        7.8
+      ],
+      "mean_difference_mw_minus_m": -0.025
+    },
+    "DJA Mw(mB)": {
+      "pairs": 33,
+      "equation": "Mw = 0.891 * DJA Mw(mB) + 0.646",
+      "slope": 0.8912,
+      "intercept": 0.6462,
+      "sigma": 0.203,
+      "valid_range": [
+        4.58,
+        6.71
+      ],
+      "mean_difference_mw_minus_m": 0.072
+    },
+    "DJA MW": {
+      "pairs": 0
+    },
+    "DJA Mw": {
+      "pairs": 1179,
+      "equation": "Mw = 0.972 * DJA Mw + 0.153",
+      "slope": 0.9718,
+      "intercept": 0.1532,
+      "sigma": 0.152,
+      "valid_range": [
+        4.32,
+        8.0
+      ],
+      "mean_difference_mw_minus_m": 0.0
+    },
+    "DJA Mwp": {
+      "pairs": 2005,
+      "equation": "Mw = 1.198 * DJA Mwp + -1.117",
+      "slope": 1.1977,
+      "intercept": -1.1171,
+      "sigma": 0.221,
+      "valid_range": [
+        4.31,
+        7.52
+      ],
+      "mean_difference_mw_minus_m": -0.036
+    },
+    "DJA MS": {
+      "pairs": 0
+    },
+    "DJA Ms": {
+      "pairs": 0
+    },
+    "ISC mb": {
+      "pairs": 8039,
+      "equation": "Mw = 1.218 * ISC mb + -1.081",
+      "slope": 1.2176,
+      "intercept": -1.0806,
+      "sigma": 0.26,
+      "valid_range": [
+        3.95,
+        7.1
+      ],
+      "mean_difference_mw_minus_m": 0.075
+    },
+    "ISC MS": {
+      "pairs": 5305,
+      "equation": "Mw = 0.682 * ISC MS + 2.105",
+      "slope": 0.6823,
+      "intercept": 2.1046,
+      "sigma": 0.18,
+      "valid_range": [
+        3.36,
+        8.69
+      ],
+      "mean_difference_mw_minus_m": 0.564
+    },
+    "NEIC mb": {
+      "pairs": 7644,
+      "equation": "Mw = 1.263 * NEIC mb + -1.351",
+      "slope": 1.2629,
+      "intercept": -1.3512,
+      "sigma": 0.248,
+      "valid_range": [
+        4.3,
+        7.2
+      ],
+      "mean_difference_mw_minus_m": 0.042
+    }
+  },
+  "notes": [
+    "isc_internal_* pairs magnitudes reported within the same ISC event and covers every year of the Bulletin (also before the BMKG catalogue).",
+    "Conversions are valid only inside valid_range; do not extrapolate.",
+    "eta = 1 assumes equal error variance in both magnitudes."
+  ]
+}

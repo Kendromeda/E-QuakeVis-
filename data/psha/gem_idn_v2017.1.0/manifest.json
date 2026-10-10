@@ -1,0 +1,88 @@
+{
+  "name": "GEM OpenQuake input model for Indonesia (IDN)",
+  "model_version": "v2017.1.0",
+  "authors": "Irsyam, M., Faizal, L., Natawidjaja, D., Meilano, I., Widiyantoro, S., Triyoso, W., Rudiyanto, A., Hidayati, S., Asrurifak, M., Ridwan, M., Cummins, P.",
+  "implementation": "GEM Foundation Hazard Team",
+  "license": "CC BY-SA 4.0",
+  "source": "https://cloud.openquake.org/s/zsoZY55oe2gSwFZ",
+  "product_page": "https://www.globalquakemodel.org/product/indonesia-hazard",
+  "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf",
+  "snapshot_date": "2026-10-05",
+  "files": [
+    {
+      "path": "LICENSE.txt",
+      "bytes": 1334,
+      "sha256": "be6e2488f46035392e6ee24d99a4bdb19c910182436a040ce8e0b51dcbdf9964"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1554,
+      "sha256": "ba9d895b5ed5ee3c265811ec87ba462e90a7868a395c634ff74ef73ee72be92e"
+    },
+    {
+      "path": "in/gmmLT.xml",
+      "bytes": 2777,
+      "sha256": "206d12cd059996a8369d82b6df4b5722d22bdbab78d7f98853e267c731775f4b"
+    },
+    {
+      "path": "in/job.ini",
+      "bytes": 1494,
+      "sha256": "041c8858d090397bf703872565e5d783b34b54165b1907dcf66714dd44d93a14"
+    },
+    {
+      "path": "in/lookup_reqv_asc.hdf5",
+      "bytes": 116512,
+      "sha256": "0cfd3d2d291e68d3cf2e4b87d81357dba88ca91ac040b3fa69141a79f0b271ff"
+    },
+    {
+      "path": "in/lookup_reqv_slb.hdf5",
+      "bytes": 116512,
+      "sha256": "8b817de4c1cac8fd4045c2a673b08a3d468a3126c89eb8211631eb75a637fa18"
+    },
+    {
+      "path": "in/ssm/crust/Indonesia_Crustal_faults.xml",
+      "bytes": 462794,
+      "sha256": "b0b7760d42544fc186c676944f041b7c8ea9205d162377358e4f95ef8137ba86"
+    },
+    {
+      "path": "in/ssm/deep_grid/layer1.xml",
+      "bytes": 18739210,
+      "sha256": "85818ba718c0f3140eed0e91971ab215192893761f77fc6d9277e6184a68fb06"
+    },
+    {
+      "path": "in/ssm/deep_grid/layer2.xml",
+      "bytes": 14278593,
+      "sha256": "a38a3e851a1755d8e78274de282d92401f252ef79b0c668f7a5fb80e2a33efe7"
+    },
+    {
+      "path": "in/ssm/deep_grid/layer3.xml",
+      "bytes": 10634174,
+      "sha256": "d9c98a558eff3a1d4255bbc65f7be64633326aa9406dd2e0b1e7e27a5c797605"
+    },
+    {
+      "path": "in/ssm/deep_grid/layer4.xml",
+      "bytes": 9703236,
+      "sha256": "db8ee02f27e747e516f1f11c17d345ccb4824ca0fc57c31e6f275b12c508a28a"
+    },
+    {
+      "path": "in/ssm/shallow_grid/layer1.xml",
+      "bytes": 2547731,
+      "sha256": "a7064536afdda57576a061afb7c9c254e6a3809e73727fcb51f7fcbad1c1950e"
+    },
+    {
+      "path": "in/ssm/shallow_grid/layer2.xml",
+      "bytes": 2606326,
+      "sha256": "2ca4e8e1d18acea6951169d3405a16446a45d880907253e02c4e67d09d5ecc34"
+    },
+    {
+      "path": "in/ssm/sub/Indonesia_Sub.xml",
+      "bytes": 26476,
+      "sha256": "a1c717a5a8211164e3e33a9cb434bc836de28dcd6ab9ce2c1bdd076cc3cd2d7a"
+    },
+    {
+      "path": "in/ssmLT.xml",
+      "bytes": 1107,
+      "sha256": "1a0438da8d30e56967c4c9599951d4be9bbca723e9e5263cbfa8b5298b0427fd"
+    }
+  ]
+}
