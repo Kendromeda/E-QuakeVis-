@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import namedtuple
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,7 @@ from utils.psha_jobs import (
     waiting_for_memory,
 )
 from utils.psha_sites import build_sites, load_province_features, province_names
+from scripts.oq_run import MemoryGate
 
 SQUARE = {
     "type": "Feature",
@@ -167,6 +169,44 @@ def test_waiting_for_memory_only_when_last_line_says_so(tmp_path):
     assert waiting_for_memory(job) is None
 
 
+LIMIT = psha_jobs.OQ_MEMORY_LIMIT_PERCENT
+
+
+class FakePsutil:
+    """Enough of ``psutil`` for ``MemoryGate``: a reading and one other call."""
+
+    svmem = namedtuple("svmem", "total percent")
+
+    def __init__(self, percent: float) -> None:
+        self._percent = percent
+
+    def virtual_memory(self):
+        return self.svmem(16 * 1024**3, self._percent)
+
+    def cpu_count(self):
+        return 4
+
+
+def test_memory_limit_lifts_openquakes_own_threshold():
+    """OpenQuake hardcodes 80 %; the app runs jobs at higher occupation."""
+    assert LIMIT > 80
+
+
+@pytest.mark.parametrize("used, reported", [
+    (LIMIT - 30, 0.0),   # plenty free: report 0 so OpenQuake's "< 80" passes
+    (LIMIT - 0.1, 0.0),  # just under the limit: still start at once
+    (LIMIT, LIMIT),      # at the limit: OpenQuake waits and logs the truth
+    (LIMIT + 2, LIMIT + 2),
+])
+def test_memory_gate_starts_below_the_limit_and_reports_above(used, reported):
+    gate = MemoryGate(FakePsutil(used), LIMIT)
+    assert gate.virtual_memory().percent == reported
+
+
+def test_memory_gate_delegates_everything_else_to_psutil():
+    assert MemoryGate(FakePsutil(50.0), LIMIT).cpu_count() == 4
+
+
 def test_start_job_passes_user_gmpe_logic_tree(tmp_path, monkeypatch):
     python = tmp_path / "python.exe"
     python.write_text("", encoding="utf-8")
@@ -184,3 +224,25 @@ def test_start_job_passes_user_gmpe_logic_tree(tmp_path, monkeypatch):
     assert job.info["project_id"] == "ntt"
     # One GMPE instead of the 13-GMPE baseline: a much shorter estimate.
     assert job.info["estimated_seconds"] < estimate_runtime_seconds(102)
+
+
+def test_start_job_limits_openquake_workers(tmp_path, monkeypatch):
+    python = tmp_path / "python.exe"
+    python.write_text("", encoding="utf-8")
+    seen = {}
+    monkeypatch.delenv("OQ_NUM_CORES", raising=False)
+    monkeypatch.setattr(psha_jobs, "_spawn",
+                        lambda command, env, log_path: seen.update(env=env) or 1)
+    start_job("r", [], 0.5, 1, tmp_path / "results", python=python, oq_datadir=None)
+    assert seen["env"]["OQ_NUM_CORES"] == str(psha_jobs.DEFAULT_OQ_CORES)
+
+
+def test_start_job_drops_sslkeylogfile(tmp_path, monkeypatch):
+    python = tmp_path / "python.exe"
+    python.write_text("", encoding="utf-8")
+    seen = {}
+    monkeypatch.setenv("SSLKEYLOGFILE", r"\.\aswMonFltProxy\x")
+    monkeypatch.setattr(psha_jobs, "_spawn",
+                        lambda command, env, log_path: seen.update(env=env) or 1)
+    start_job("r", [], 0.5, 1, tmp_path / "results", python=python, oq_datadir=None)
+    assert "SSLKEYLOGFILE" not in seen["env"]

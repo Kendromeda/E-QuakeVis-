@@ -8,3 +8,4 @@ pillow>=10.0
 pyshp>=2.3,<3.1
 mapbox-vector-tile>=2.2,<3
 plotly>=6.0,<7
+matplotlib>=3.8

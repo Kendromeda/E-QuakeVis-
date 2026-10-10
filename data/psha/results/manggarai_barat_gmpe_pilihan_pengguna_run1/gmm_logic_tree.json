@@ -1,0 +1,52 @@
+{
+  "Active Shallow Crust": [
+    {
+      "gmpe": "BooreEtAl2014",
+      "weight": 0.34
+    },
+    {
+      "gmpe": "CampbellBozorgnia2014",
+      "weight": 0.33
+    },
+    {
+      "gmpe": "ChiouYoungs2014",
+      "weight": 0.33
+    }
+  ],
+  "Subduction Interface": [
+    {
+      "gmpe": "AbrahamsonGulerce2020SInter",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "ParkerEtAl2020SInter",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "KuehnEtAl2020SInter",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "ZhaoEtAl2006SInter",
+      "weight": 0.25
+    }
+  ],
+  "Subduction Intraslab": [
+    {
+      "gmpe": "AbrahamsonGulerce2020SSlab",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "ParkerEtAl2020SSlab",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "KuehnEtAl2020SSlab",
+      "weight": 0.25
+    },
+    {
+      "gmpe": "ZhaoEtAl2006SSlab",
+      "weight": 0.25
+    }
+  ]
+}
