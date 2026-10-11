@@ -143,6 +143,7 @@ from utils.psha_jobs import (
     make_run_id,
     MODEL_VERSIONS,
     oq_available,
+    OQ_MEMORY_LIMIT_PERCENT,
     start_job,
     waiting_for_memory,
 )
@@ -3301,7 +3302,7 @@ def render_psha_job_form() -> None:
     spacing = st.radio(
         "Jarak grid situs",
         SPACING_OPTIONS,
-        index=1,
+        index=SPACING_OPTIONS.index(0.2),
         format_func=lambda value: f"{value:g}° (±{value * 111:.0f} km)".replace(".", ","),
         horizontal=True,
         key="psha_new_spacing",
@@ -3385,8 +3386,8 @@ def render_psha_job_monitor() -> None:
     if memory_use is not None:
         st.warning(
             f"OpenQuake menunggu: RAM terpakai {memory_use}%, sedangkan OpenQuake baru "
-            "mulai bila pemakaian di bawah 80%. Tutup aplikasi lain (browser, chat, "
-            "dsb.); perhitungan akan lanjut sendiri."
+            f"mulai bila pemakaian di bawah {OQ_MEMORY_LIMIT_PERCENT}%. Tutup aplikasi "
+            "lain (browser, chat, dsb.); perhitungan akan lanjut sendiri."
         )
     st.code(log_tail(job) or "(log belum ada)", language=None)
     st.caption(

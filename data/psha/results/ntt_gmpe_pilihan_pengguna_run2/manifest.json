@@ -1,0 +1,112 @@
+{
+  "run_id": "ntt_gmpe_pilihan_pengguna_run2",
+  "created_utc": "2026-10-10T05:30:37+00:00",
+  "openquake_version": "3.26.2",
+  "model": {
+    "name": "GEM OpenQuake input model for Indonesia (IDN)",
+    "model_version": "v2024.0.0",
+    "authors": "Team for Updating Seismic Hazard Maps of Indonesia (PuSGeN, Kementerian Pekerjaan Umum) and GEM Foundation",
+    "license": "CC BY-NC-SA 4.0",
+    "source": "https://cloud.openquake.org/s/wCBESckQYgWgLqx",
+    "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf"
+  },
+  "region": {
+    "provinces": [
+      "Nusa Tenggara Timur"
+    ],
+    "spacing_degrees": 0.2
+  },
+  "num_sites": 102,
+  "approximations": {
+    "ps_grid_spacing_km": 0.0,
+    "pointsource_distance_km": 200,
+    "maximum_distance_km": {
+      "Subduction Interface": 1000.0,
+      "default": 300.0
+    }
+  },
+  "site_condition": {
+    "vs30_m_s": 760.0,
+    "vs30_type": "measured",
+    "z1pt0_m": null,
+    "z2pt5_km": null
+  },
+  "investigation_time_years": 50.0,
+  "poes": [
+    0.1,
+    0.02
+  ],
+  "return_periods_years": [
+    475,
+    2475
+  ],
+  "imts": [
+    "PGA",
+    "SA(0.2)",
+    "SA(1.0)"
+  ],
+  "gmpe_logic_tree": {
+    "source": "user",
+    "branches": {
+      "Active Shallow Crust": [
+        {
+          "gmpe": "BooreEtAl2014",
+          "weight": 0.34
+        },
+        {
+          "gmpe": "CampbellBozorgnia2014",
+          "weight": 0.33
+        },
+        {
+          "gmpe": "ChiouYoungs2014",
+          "weight": 0.33
+        }
+      ],
+      "Subduction Interface": [
+        {
+          "gmpe": "AbrahamsonGulerce2020SInter",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "ParkerEtAl2020SInter",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "KuehnEtAl2020SInter",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "ZhaoEtAl2006SInter",
+          "weight": 0.25
+        }
+      ],
+      "Subduction Intraslab": [
+        {
+          "gmpe": "AbrahamsonGulerce2020SSlab",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "ParkerEtAl2020SSlab",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "KuehnEtAl2020SSlab",
+          "weight": 0.25
+        },
+        {
+          "gmpe": "ZhaoEtAl2006SSlab",
+          "weight": 0.25
+        }
+      ]
+    }
+  },
+  "statistic": "mean over the full source and GMPE logic tree",
+  "units": "g",
+  "runtime_seconds": 397,
+  "outputs": {
+    "hazard_map.csv": "e1b44863e1adc50fd4c62f5ce68a2a3eb458826195c81a23fccf923db8ba370d",
+    "hazard_curves-PGA.csv": "46d66bd6c83a328a8e15478bd43c40c1f2909facfc0df638f4fd84dcb8cd2dd1",
+    "hazard_curves-SA(0.2).csv": "d20ec3040fe7f897ab09877f85b0bc3d8e7318925c731fdb3c16ee99998eecfc",
+    "hazard_curves-SA(1.0).csv": "197f61ccb80ccc0b1ae7f4eb9bc98a44fbb053b9be8a0ffe246b0137c0e03e48"
+  }
+}

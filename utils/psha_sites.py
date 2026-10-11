@@ -1,7 +1,9 @@
 """PSHA site grids shared by the app and ``scripts/run_psha.py``.
 
 Sites are nodes of a regular lon/lat grid (multiples of ``spacing``) that fall
-on land inside the selected provinces of ``data/provinsi_indonesia_38.geojson``.
+on land inside the selected areas: provinces of
+``data/provinsi_indonesia_38.geojson`` or regencies/cities (kabupaten/kota) of
+``data/kabupaten_kota_indonesia.geojson``.
 """
 from __future__ import annotations
 
@@ -17,30 +19,54 @@ from shapely.geometry import shape
 ROOT = Path(__file__).resolve().parents[1]
 PROVINCES_PATH = ROOT / "data" / "provinsi_indonesia_38.geojson"
 PROVINCE_KEY = "PROVINSI"
+KABUPATEN_PATH = ROOT / "data" / "kabupaten_kota_indonesia.geojson"
+KABUPATEN_KEY = "WADMKK"
+KABUPATEN_PROVINCE_KEY = "WADMPR"
 
 
 def load_province_features(path: Path = PROVINCES_PATH) -> list[dict[str, Any]]:
     return json.loads(path.read_text(encoding="utf-8"))["features"]
 
 
+def load_kabupaten_features(path: Path = KABUPATEN_PATH) -> list[dict[str, Any]]:
+    return json.loads(path.read_text(encoding="utf-8"))["features"]
+
+
+def _names(features: list[dict[str, Any]], key: str) -> list[str]:
+    return sorted({f["properties"][key] for f in features if f["properties"].get(key)})
+
+
 def province_names(features: list[dict[str, Any]]) -> list[str]:
-    return sorted({f["properties"][PROVINCE_KEY] for f in features})
+    return _names(features, PROVINCE_KEY)
+
+
+def kabupaten_names(features: list[dict[str, Any]], province: str | None = None) -> list[str]:
+    """Kabupaten/kota names, optionally only those of one province."""
+    if province:
+        features = [f for f in features
+                    if f["properties"].get(KABUPATEN_PROVINCE_KEY) == province]
+    return _names(features, KABUPATEN_KEY)
 
 
 def build_sites(
     features: list[dict[str, Any]],
-    provinces: Iterable[str] | None,
+    areas: Iterable[str] | None,
     spacing: float,
+    key: str = PROVINCE_KEY,
 ) -> list[tuple[float, float]]:
-    """Grid nodes that fall on land in ``provinces`` (all provinces when empty)."""
+    """Grid nodes that fall on land in ``areas`` (every feature when empty).
+
+    ``key`` is the property naming each area: ``PROVINCE_KEY`` for provinces,
+    ``KABUPATEN_KEY`` for kabupaten/kota.
+    """
     if spacing <= 0:
         raise ValueError("Jarak grid harus positif.")
-    selected = set(provinces or ())
+    selected = set(areas or ())
     if selected:
-        unknown = sorted(selected - set(province_names(features)))
+        unknown = sorted(selected - set(_names(features, key)))
         if unknown:
-            raise ValueError(f"Provinsi tidak dikenal: {', '.join(unknown)}")
-        features = [f for f in features if f["properties"][PROVINCE_KEY] in selected]
+            raise ValueError(f"Wilayah tidak dikenal: {', '.join(unknown)}")
+        features = [f for f in features if f["properties"].get(key) in selected]
     # Some source polygons are topologically invalid, so test each one instead
     # of unioning them.
     polygons = [shape(f["geometry"]) for f in features if f.get("geometry")]

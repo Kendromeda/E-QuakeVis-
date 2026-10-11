@@ -34,6 +34,7 @@ from utils.psha_jobs import (
     log_tail,
     memory_percent,
     oq_available,
+    OQ_MEMORY_LIMIT_PERCENT,
     start_job,
     waiting_for_memory,
 )
@@ -44,7 +45,14 @@ from utils.psha_results import (
     load_hazard_map,
     model_label,
 )
-from utils.psha_sites import build_sites, load_province_features, province_names
+from utils.psha_sites import (
+    KABUPATEN_KEY,
+    build_sites,
+    kabupaten_names,
+    load_kabupaten_features,
+    load_province_features,
+    province_names,
+)
 
 DEFAULT_PROVINCES = ["Nusa Tenggara Timur"]
 SOURCE_OPTIONS = {
@@ -69,8 +77,27 @@ def _province_names() -> list[str]:
 
 
 @st.cache_data(show_spinner=False)
-def _sites(provinces: tuple[str, ...], spacing: float) -> list[tuple[float, float]]:
+def _kabupaten_names(province: str) -> list[str]:
+    return kabupaten_names(load_kabupaten_features(), province)
+
+
+@st.cache_data(show_spinner=False)
+def _sites(provinces: tuple[str, ...], spacing: float,
+           kabupaten: tuple[str, ...] = ()) -> list[tuple[float, float]]:
+    if kabupaten:
+        return build_sites(load_kabupaten_features(), kabupaten, spacing, key=KABUPATEN_KEY)
     return build_sites(load_province_features(), provinces, spacing)
+
+
+def _region_sites(region: dict[str, Any]) -> list[tuple[float, float]]:
+    return _sites(tuple(region.get("provinces", [])), float(region["spacing"]),
+                  tuple(region.get("kabupaten", [])))
+
+
+def _region_label(region: dict[str, Any]) -> str:
+    if region.get("kabupaten"):
+        return "Kabupaten/kota " + ", ".join(region["kabupaten"])
+    return ", ".join(region.get("provinces", []))
 
 
 @st.cache_data(show_spinner=False)
@@ -177,8 +204,9 @@ def _step_region(project: dict[str, Any]) -> None:
     st.markdown(
         "**Apa yang diputuskan:** titik-titik (situs) tempat bahaya gempa dihitung, dan "
         "kondisi tanah di situs itu.\n\n"
-        "- **Situs** adalah titik grid di daratan provinsi terpilih. Sumber gempa di luar "
-        "provinsi tetap diperhitungkan (sampai 300 km, megathrust sampai 1000 km).\n"
+        "- **Situs** adalah titik grid di daratan provinsi atau kabupaten/kota terpilih. "
+        "Sumber gempa di luar wilayah itu tetap diperhitungkan (sampai 300 km, megathrust "
+        "sampai 1000 km); wilayah kecil hanya mengurangi jumlah titik yang dihitung.\n"
         "- **Jarak grid** menentukan kerapatan titik. Makin rapat makin detail, tetapi "
         "waktu hitung naik sebanding jumlah situs.\n"
         "- **Kondisi situs**: batuan referensi Vs30 = 760 m/s (batas kelas situs SB, "
@@ -188,20 +216,38 @@ def _step_region(project: dict[str, Any]) -> None:
         "50 tahun), untuk PGA, SA 0,2 detik, dan SA 1,0 detik."
     )
     region = project["region"]
-    provinces = st.multiselect(
-        "Provinsi", _province_names(),
-        default=region.get("provinces") or DEFAULT_PROVINCES,
-        key=f"wizard_provinces_{project['id']}")
+    levels = {"provinsi": "Provinsi", "kabupaten": "Kabupaten/kota"}
+    level = st.radio("Tingkat wilayah", list(levels), format_func=levels.get, horizontal=True,
+                     index=1 if region.get("kabupaten") else 0,
+                     key=f"wizard_level_{project['id']}")
+    kabupaten: list[str] = []
+    if level == "kabupaten":
+        names = _province_names()
+        current = (region.get("provinces") or DEFAULT_PROVINCES)[0]
+        province = st.selectbox("Provinsi", names,
+                                index=names.index(current) if current in names else 0,
+                                key=f"wizard_kab_province_{project['id']}")
+        provinces = [province]
+        options = _kabupaten_names(province)
+        kabupaten = st.multiselect(
+            "Kabupaten/kota", options,
+            default=[k for k in region.get("kabupaten", []) if k in options],
+            key=f"wizard_kabupaten_{project['id']}")
+    else:
+        provinces = st.multiselect(
+            "Provinsi", _province_names(),
+            default=region.get("provinces") or DEFAULT_PROVINCES,
+            key=f"wizard_provinces_{project['id']}")
     spacing_now = region.get("spacing", 0.2)
     spacing = st.radio(
         "Jarak grid situs", SPACING_OPTIONS,
-        index=SPACING_OPTIONS.index(spacing_now) if spacing_now in SPACING_OPTIONS else 1,
-        format_func=lambda v: f"{v:g}° (±{v * 111:.0f} km)".replace(".", ","),
+        index=SPACING_OPTIONS.index(spacing_now if spacing_now in SPACING_OPTIONS else 0.2),
+        format_func=lambda v: f"{v:g}° (±{v * 111:.1f} km)".replace(".", ","),
         horizontal=True, key=f"wizard_spacing_{project['id']}")
-    if not provinces:
-        st.warning("Pilih minimal satu provinsi.")
+    if not provinces or (level == "kabupaten" and not kabupaten):
+        st.warning("Pilih minimal satu wilayah.")
         return
-    sites = _sites(tuple(provinces), float(spacing))
+    sites = _sites(tuple(provinces), float(spacing), tuple(kabupaten))
     cols = st.columns(3)
     cols[0].metric("Jumlah situs", f"{len(sites):,}".replace(",", "."))
     cols[1].metric("Vs30 referensi", "760 m/s")
@@ -212,7 +258,8 @@ def _step_region(project: dict[str, Any]) -> None:
                size=1500, height=320)
     note = _notes(project, "region", "Catatan: mengapa wilayah dan grid ini dipilih?")
     if _confirm_button(project, "region", "Konfirmasi wilayah", disabled=not sites):
-        project["region"] = {"provinces": provinces, "spacing": float(spacing), "vs30": 760.0}
+        project["region"] = {"provinces": provinces, "kabupaten": kabupaten,
+                             "spacing": float(spacing), "vs30": 760.0}
         project.setdefault("notes", {})["region"] = note
         _commit(project, "region")
 
@@ -486,7 +533,7 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
     version = project["source_model"]["version"]
     trts = project["source_model"].get("trts") or _source_trts(version)
     tree = project["gmpe_logic_tree"]
-    sites = _sites(tuple(region["provinces"]), float(region["spacing"]))
+    sites = _region_sites(region)
     n_gmpes = gc.gmpe_count(tree)
     estimate = estimate_runtime_seconds(len(sites), n_gmpes)
 
@@ -499,7 +546,7 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
                    f"{gc.realizations(tree, trts):,}".replace(",", "."))
     cols[3].metric("Perkiraan waktu", format_duration(estimate))
     st.markdown(
-        f"- **Wilayah:** {escape_html(', '.join(region['provinces']))}, grid "
+        f"- **Wilayah:** {escape_html(_region_label(region))}, grid "
         f"{region['spacing']:g}°, Vs30 {region['vs30']:g} m/s\n"
         f"- **Model sumber:** {escape_html(SOURCE_OPTIONS.get(version, version))}\n"
         "- **Keluaran:** kurva hazard rerata dan peta PGA, SA 0,2, SA 1,0 untuk 475 dan "
@@ -528,11 +575,12 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
         st.error("Lingkungan OpenQuake (.venv-oq) tidak ditemukan di komputer ini.")
         return
     memory = memory_percent()
-    if memory is not None and memory >= 80:
+    if memory is not None and memory >= OQ_MEMORY_LIMIT_PERCENT:
         st.warning(
             f"RAM terpakai {memory:.0f}%. OpenQuake baru mulai menghitung bila pemakaian "
-            "di bawah 80%; tutup aplikasi lain (browser, aplikasi chat) sebelum atau sesudah "
-            "menekan tombol. Perhitungan akan menunggu dan lanjut sendiri.")
+            f"di bawah {OQ_MEMORY_LIMIT_PERCENT}%; tutup aplikasi lain (browser, aplikasi "
+            "chat) sebelum atau sesudah menekan tombol. Perhitungan akan menunggu dan "
+            "lanjut sendiri.")
     if running is not None:
         st.info(f"Run lain (`{running.run_id}`) sedang berjalan. Tunggu sampai selesai.")
         return
@@ -545,7 +593,7 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
         try:
             start_job(run_id, region["provinces"], float(region["spacing"]), len(sites),
                       results_dir, model_version=version, gmm_logic_tree=tree,
-                      project_id=project["id"])
+                      project_id=project["id"], kabupaten=region.get("kabupaten", []))
         except (PSHAJobError, OSError) as exc:
             st.error(f"Perhitungan tidak dapat dimulai: {exc}")
             return
@@ -571,8 +619,9 @@ def _monitor(results_dir: Path) -> None:
                      f"· {stage}")
     memory = waiting_for_memory(job)
     if memory is not None:
-        st.warning(f"OpenQuake menunggu: RAM terpakai {memory}%, perlu di bawah 80%. "
-                   "Tutup aplikasi lain; perhitungan lanjut sendiri.")
+        st.warning(f"OpenQuake menunggu: RAM terpakai {memory}%, perlu di bawah "
+                   f"{OQ_MEMORY_LIMIT_PERCENT}%. Tutup aplikasi lain; perhitungan "
+                   "lanjut sendiri.")
     st.code(log_tail(job) or "(log belum ada)", language=None)
     if st.button("Hentikan perhitungan", key=f"wizard_cancel_{job.run_id}"):
         cancel_job(job)

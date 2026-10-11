@@ -35,13 +35,25 @@ SECONDS_PER_SITE = (20.6 * 60 - FIXED_OVERHEAD_SECONDS) / 382
 # the number of GMPEs in the logic tree.
 BASELINE_GMPES = 13
 GMM_LT_FILE = "gmm_logic_tree.json"
-SPACING_OPTIONS = (0.1, 0.2, 0.25, 0.5)
+# OpenQuake workers. Each worker holds part of the source model in RAM; with all
+# 12 cores the NTT v2024 run hit OpenQuake's 99% memory limit in preclassical
+# on this 16 GB laptop, so runs use fewer workers (slower, far less RAM).
+DEFAULT_OQ_CORES = 4
+# Antivirus software (Avast) sets SSLKEYLOGFILE to a device path; OpenSSL then
+# tries to open it and the OpenQuake process dies at start-up with
+# "OPENSSL_Uplink ... no OPENSSL_Applink". OpenQuake never needs it.
+UNSAFE_ENV = ("SSLKEYLOGFILE",)
+SPACING_OPTIONS = (0.05, 0.1, 0.2, 0.25, 0.5)
 # GEM IDN models known to scripts/run_psha.py, newest (default) first.
 MODEL_VERSIONS = ("v2024.0.0", "v2017.1.0")
+# RAM use (%) at or above which OpenQuake waits instead of starting a job.
+# OpenQuake hardcodes 80 in ``openquake.engine.engine.run_calc``; on this 16 GB
+# laptop the app, a browser and a chat client sit above that while a run of a
+# few hundred sites still finishes, so scripts/oq_run.py raises it to this value.
+OQ_MEMORY_LIMIT_PERCENT = 95
 
 _PROGRESS = re.compile(r"\] (\w+)\s+(\d{1,3})% \[")
-# OpenQuake refuses to start while more than 80 % of RAM is in use and logs this
-# line every few seconds until memory is freed.
+# While it waits, OpenQuake logs this line every few seconds until memory frees up.
 _MEMORY_WAIT = re.compile(r"Memory occupation (\d+)%")
 
 
@@ -86,7 +98,7 @@ def format_duration(seconds: float) -> str:
 
 
 def memory_percent() -> float | None:
-    """System RAM in use (%), the figure OpenQuake checks (< 80 % to start)."""
+    """System RAM in use (%), the figure OpenQuake checks against the limit."""
     if os.name != "nt":
         try:
             import psutil
@@ -206,6 +218,7 @@ def start_job(
     model_version: str = MODEL_VERSIONS[0],
     gmm_logic_tree: dict | None = None,
     project_id: str | None = None,
+    kabupaten: Sequence[str] = (),
 ) -> PSHAJob:
     """Start ``run_psha.py`` in the background; one run at a time.
 
@@ -231,7 +244,9 @@ def start_job(
 
     command = [str(python), str(RUN_SCRIPT), "--run-id", run_id, "--model", model_version,
                "--spacing", f"{spacing:g}"]
-    if provinces:
+    if kabupaten:
+        command += ["--kabupaten", *kabupaten]
+    elif provinces:
         command += ["--provinces", *provinces]
     if gmm_logic_tree is not None:
         lt_path = run_dir / GMM_LT_FILE
@@ -239,8 +254,9 @@ def start_job(
                            encoding="utf-8")
         command += ["--gmm-lt-json", str(lt_path)]
     env = {key: value for key, value in os.environ.items()
-           if key not in ("PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV")}
+           if key not in ("PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV") + UNSAFE_ENV}
     env["PYTHONUNBUFFERED"] = "1"
+    env.setdefault("OQ_NUM_CORES", str(DEFAULT_OQ_CORES))
     if "OQ_DATADIR" not in env and oq_datadir is not None and oq_datadir.parent.exists():
         env["OQ_DATADIR"] = str(oq_datadir)
 
@@ -250,6 +266,7 @@ def start_job(
         "pid": pid,
         "started_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "provinces": list(provinces),
+        "kabupaten": list(kabupaten),
         "spacing_degrees": spacing,
         "model_version": model_version,
         "project_id": project_id,

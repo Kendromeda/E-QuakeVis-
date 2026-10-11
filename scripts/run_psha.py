@@ -38,7 +38,12 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from utils.gmpe_catalog import write_gmm_logic_tree  # noqa: E402
-from utils.psha_sites import build_sites, load_province_features  # noqa: E402
+from utils.psha_sites import (  # noqa: E402
+    KABUPATEN_KEY,
+    build_sites,
+    load_kabupaten_features,
+    load_province_features,
+)
 
 PSHA_DIR = ROOT / "data" / "psha"
 RESULTS_DIR = PSHA_DIR / "results"
@@ -228,6 +233,8 @@ def main() -> int:
     parser.add_argument("--model", choices=list(MODELS), default=DEFAULT_MODEL,
                         help="GEM IDN model version (download it first)")
     parser.add_argument("--provinces", nargs="*", help="limit sites to these provinces")
+    parser.add_argument("--kabupaten", nargs="*",
+                        help="limit sites to these kabupaten/kota (overrides --provinces)")
     parser.add_argument("--spacing", type=float, default=0.1, help="site spacing in degrees")
     parser.add_argument("--vs30", type=float, default=760.0, help="reference Vs30 (m/s)")
     parser.add_argument(
@@ -250,7 +257,11 @@ def main() -> int:
     run_dir = RESULTS_DIR / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     try:
-        sites = build_sites(load_province_features(), args.provinces, args.spacing)
+        if args.kabupaten:
+            sites = build_sites(load_kabupaten_features(), args.kabupaten, args.spacing,
+                                key=KABUPATEN_KEY)
+        else:
+            sites = build_sites(load_province_features(), args.provinces, args.spacing)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if not sites:
@@ -270,8 +281,14 @@ def main() -> int:
     shutil.rmtree(run_dir / "export", ignore_errors=True)
     clear_stale_jobs()
     started = time.time()
-    subprocess.run([sys.executable, "-m", "openquake.commands", "run", "job.ini", "-e", "csv"],
-                   cwd=run_dir, check=True)
+    # SSLKEYLOGFILE (set by some antivirus software) crashes OpenSSL inside
+    # OpenQuake on Windows ("no OPENSSL_Applink"); OpenQuake does not need it.
+    oq_env = {key: value for key, value in os.environ.items() if key != "SSLKEYLOGFILE"}
+    # scripts/oq_run.py is "python -m openquake.commands" with E-QuakeVis'
+    # start-up memory threshold (utils.psha_jobs.OQ_MEMORY_LIMIT_PERCENT).
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "oq_run.py"),
+                    "run", "job.ini", "-e", "csv"],
+                   cwd=run_dir, check=True, env=oq_env)
     elapsed = time.time() - started
     outputs = collect_outputs(run_dir, args.imts)
     shutil.rmtree(run_dir / "export")
@@ -284,7 +301,8 @@ def main() -> int:
         "openquake_version": oq_version,
         "model": {key: model_info[key] for key in
                   ("name", "model_version", "authors", "license", "source", "documentation")},
-        "region": {"provinces": args.provinces or "all", "spacing_degrees": args.spacing},
+        "region": {"provinces": args.provinces or "all", "spacing_degrees": args.spacing,
+                   **({"kabupaten": args.kabupaten} if args.kabupaten else {})},
         "num_sites": len(sites),
         "approximations": {"ps_grid_spacing_km": args.ps_grid_spacing,
                            "pointsource_distance_km": POINTSOURCE_DISTANCE_KM,

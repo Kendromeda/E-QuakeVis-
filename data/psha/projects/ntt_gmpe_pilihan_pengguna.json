@@ -2,7 +2,7 @@
   "id": "ntt_gmpe_pilihan_pengguna",
   "name": "NTT – GMPE pilihan pengguna",
   "created_utc": "2026-10-10T03:38:36+00:00",
-  "updated_utc": "2026-10-10T03:38:56+00:00",
+  "updated_utc": "2026-10-10T05:40:18+00:00",
   "region": {
     "provinces": [
       "Nusa Tenggara Timur"
@@ -77,10 +77,10 @@
     "gmpe": "Dipilih pengguna setelah melihat trellis skenario NTT: kerak dangkal NGA-West2 tiga (BSSA14, CB14, CY14); megathrust dan intraslab NGA-Sub versi global + Zhao 2006 (tanpa penyesuaian regional Cascadia, yang ~3x lebih rendah untuk AG20); bobot sama rata."
   },
   "confirmed": {
-    "region": "2026-10-10T03:38:36+00:00",
-    "source": "2026-10-10T03:38:36+00:00",
-    "gmpe": "2026-10-10T03:38:36+00:00",
-    "review": "2026-10-10T03:38:56+00:00"
+    "region": "2026-10-10T05:23:22+00:00",
+    "source": "2026-10-10T05:23:31+00:00",
+    "gmpe": "2026-10-10T05:23:38+00:00",
+    "review": "2026-10-10T05:23:48+00:00"
   },
-  "run_id": "ntt_gmpe_pilihan_pengguna_run1"
+  "run_id": "ntt_gmpe_pilihan_pengguna_run2"
 }
