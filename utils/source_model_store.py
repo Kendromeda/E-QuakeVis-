@@ -112,8 +112,9 @@ def build_source_model(name: str, bounds: tuple, options: dict, python: Path,
     if not python.is_file():
         raise SourceModelError(f"Lingkungan OpenQuake tidak ditemukan: {python}")
     if not CATALOG_PATH.is_file():
-        raise SourceModelError("Katalog Mw gabungan belum dibuat. Jalankan "
-                               "scripts/build_mw_catalog.py di lingkungan OpenQuake.")
+        raise SourceModelError("Katalog Mw gabungan belum ada. Jalankan "
+                               "scripts/setup_psha_data.py --only catalog di lingkungan "
+                               "OpenQuake.")
     env = {key: value for key, value in os.environ.items()
            if key not in ("PYTHONHOME", "PYTHONPATH", "VIRTUAL_ENV", "SSLKEYLOGFILE")}
     try:
