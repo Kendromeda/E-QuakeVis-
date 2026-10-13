@@ -170,7 +170,26 @@ class Stage:
     min_magnitude: float | None
     max_magnitude: float | None
     tag: str  # part-name suffix; "" keeps the original monthly M>=4 parts
+    region: dict | None = None  # None: REGION
+    yearly: bool = False  # yearly windows throughout (sparse margin bands)
 
+
+# Bands around REGION so that a source region (a box plus a 300 km buffer, about
+# 3 degrees) near the edge of Indonesia still has its earthquakes. Only M >= 4
+# is needed there: those events feed source models, not magnitude calibration.
+MARGIN_DEG = 3.5
+EXTENDED_REGION = {"minlatitude": REGION["minlatitude"] - MARGIN_DEG,
+                   "maxlatitude": REGION["maxlatitude"] + MARGIN_DEG,
+                   "minlongitude": REGION["minlongitude"] - MARGIN_DEG,
+                   "maxlongitude": REGION["maxlongitude"] + MARGIN_DEG}
+MARGIN_BANDS = {
+    "south": {**EXTENDED_REGION, "maxlatitude": REGION["minlatitude"]},
+    "north": {**EXTENDED_REGION, "minlatitude": REGION["maxlatitude"]},
+    "west": {**REGION, "minlongitude": EXTENDED_REGION["minlongitude"],
+             "maxlongitude": REGION["minlongitude"]},
+    "east": {**REGION, "minlongitude": REGION["maxlongitude"],
+             "maxlongitude": EXTENDED_REGION["maxlongitude"]},
+}
 
 STAGES = (
     # BMKG catalogue period, the events that carry independent Mw.
@@ -179,16 +198,21 @@ STAGES = (
     Stage("history", date(1904, 1, 1), date(2008, 11, 1), None, None, "_all"),
     # Small events in the BMKG period, to pair BMKG's own small-event magnitudes.
     Stage("recent_small", date(2008, 11, 1), None, None, 3.99, "_lt4"),
+) + tuple(
+    Stage(f"margin_{side}", date(1904, 1, 1), None, 4.0, None, f"_m4{side[0].upper()}",
+          region=band, yearly=True)
+    for side, band in MARGIN_BANDS.items()
 )
+MARGIN_STAGES = tuple(s.name for s in STAGES if s.name.startswith("margin_"))
 # Before 1964 (pre-ISC) there are only tens of events a year in the region.
 YEARLY_BEFORE = date(1964, 1, 1)
 
 
-def windows(start: date, end: date) -> list[tuple[date, date, str]]:
-    """(start, end, label) windows: yearly before 1964, monthly afterwards."""
+def windows(start: date, end: date, yearly: bool = False) -> list[tuple[date, date, str]]:
+    """(start, end, label) windows: yearly before 1964 (or always), monthly afterwards."""
     result, current = [], start
     while current < end:
-        if current < YEARLY_BEFORE:
+        if yearly or current < YEARLY_BEFORE:
             nxt, label = date(current.year + 1, 1, 1), f"{current:%Y}"
         else:
             nxt = date(current.year + (current.month == 12), current.month % 12 + 1, 1)
@@ -203,7 +227,8 @@ def download_window(stage: Stage, start: date, end: date, label: str) -> tuple[i
     mags_path = PARTS_DIR / f"{label}{stage.tag}_magnitudes.csv"
     if events_path.exists() and mags_path.exists():
         return -1, -1
-    params: dict = {"starttime": start.isoformat(), "endtime": end.isoformat(), **REGION}
+    params: dict = {"starttime": start.isoformat(), "endtime": end.isoformat(),
+                    **(stage.region or REGION)}
     if stage.min_magnitude is not None:
         params["minmagnitude"] = stage.min_magnitude
     if stage.max_magnitude is not None:
@@ -235,15 +260,17 @@ def combine() -> tuple[int, int]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--stage", choices=["all", *(s.name for s in STAGES)], default="all")
+    parser.add_argument("--stage", choices=["all", "margins", *(s.name for s in STAGES)],
+                        default="all", help="'margins' downloads the four margin bands")
     parser.add_argument("--end", type=date.fromisoformat, default=date.today())
     parser.add_argument("--pause", type=float, default=15.0, help="seconds between requests")
     args = parser.parse_args()
 
     PARTS_DIR.mkdir(parents=True, exist_ok=True)
-    stages = [s for s in STAGES if args.stage in ("all", s.name)]
+    stages = [s for s in STAGES if args.stage in ("all", s.name)
+              or (args.stage == "margins" and s.name in MARGIN_STAGES)]
     for stage in stages:
-        stage_windows = windows(stage.start, min(stage.end or args.end, args.end))
+        stage_windows = windows(stage.start, min(stage.end or args.end, args.end), stage.yearly)
         for index, (start, end, label) in enumerate(stage_windows, 1):
             n_events, n_mags = download_window(stage, start, end, label)
             if n_events < 0:
@@ -258,10 +285,13 @@ def main() -> int:
         "citation": CITATION,
         "license": "ISC Bulletin: free to use with citation",
         "retrieved_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "region": REGION,
+        # Outer extent of every downloaded part; the margin bands hold M >= 4 only.
+        "region": EXTENDED_REGION if any(PARTS_DIR.glob("*_m4*_events.csv")) else REGION,
+        "core_region": REGION,
         "stages": [{"name": s.name, "start": s.start.isoformat(),
                     "end": (s.end or args.end).isoformat(),
-                    "minmagnitude": s.min_magnitude, "maxmagnitude": s.max_magnitude}
+                    "minmagnitude": s.min_magnitude, "maxmagnitude": s.max_magnitude,
+                    "region": s.region or REGION}
                    for s in STAGES],
         "note": ("Magnitude limits are applied by the ISC service; every magnitude "
                  "reported for a selected event is kept and events are de-duplicated "

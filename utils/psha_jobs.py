@@ -43,7 +43,10 @@ DEFAULT_OQ_CORES = 4
 # tries to open it and the OpenQuake process dies at start-up with
 # "OPENSSL_Uplink ... no OPENSSL_Applink". OpenQuake never needs it.
 UNSAFE_ENV = ("SSLKEYLOGFILE",)
-SPACING_OPTIONS = (0.05, 0.1, 0.2, 0.25, 0.5)
+SPACING_OPTIONS = (0.01, 0.05, 0.1, 0.2, 0.25, 0.5)
+# Above this many sites a run takes most of a day on the reference laptop
+# (about 2.6 s per site with 13 GMPEs); the wizard asks for a smaller area.
+MAX_SITES = 10_000
 # GEM IDN models known to scripts/run_psha.py, newest (default) first.
 MODEL_VERSIONS = ("v2024.0.0", "v2017.1.0")
 # RAM use (%) at or above which OpenQuake waits instead of starting a job.
@@ -219,12 +222,20 @@ def start_job(
     gmm_logic_tree: dict | None = None,
     project_id: str | None = None,
     kabupaten: Sequence[str] = (),
+    bounds: Sequence[float] | None = None,
+    source_model: Path | None = None,
+    vs30_source: str = "reference",
 ) -> PSHAJob:
     """Start ``run_psha.py`` in the background; one run at a time.
 
     ``gmm_logic_tree`` ({trt: [{gmpe, weight}]}) replaces the model's own GMPE
-    logic tree; ``project_id`` links the run to a wizard project.
+    logic tree; ``project_id`` links the run to a wizard project. ``bounds``
+    (west, south, east, north) limits the sites to a box, and ``source_model``
+    (a Tahap B folder from ``scripts/build_source_model.py``) replaces GEM's
+    sources.
     """
+    if source_model is not None and not (Path(source_model) / "ssmLT.xml").is_file():
+        raise PSHAJobError(f"Model sumber {source_model} belum lengkap (tidak ada ssmLT.xml).")
     if not oq_available(python):
         raise PSHAJobError(f"Lingkungan OpenQuake tidak ditemukan: {python}")
     if active_job(results_dir) is not None:
@@ -248,6 +259,12 @@ def start_job(
         command += ["--kabupaten", *kabupaten]
     elif provinces:
         command += ["--provinces", *provinces]
+    if bounds is not None:
+        command += ["--bounds", *(f"{v:g}" for v in bounds)]
+    if source_model is not None:
+        command += ["--source-model", str(source_model)]
+    if vs30_source != "reference":
+        command += ["--vs30-source", vs30_source]
     if gmm_logic_tree is not None:
         lt_path = run_dir / GMM_LT_FILE
         lt_path.write_text(json.dumps(gmm_logic_tree, indent=2, ensure_ascii=False) + "\n",
@@ -267,6 +284,9 @@ def start_job(
         "started_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "provinces": list(provinces),
         "kabupaten": list(kabupaten),
+        "bounds": list(bounds) if bounds is not None else None,
+        "source_model": str(source_model) if source_model is not None else None,
+        "vs30_source": vs30_source,
         "spacing_degrees": spacing,
         "model_version": model_version,
         "project_id": project_id,

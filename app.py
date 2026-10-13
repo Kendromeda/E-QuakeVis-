@@ -160,6 +160,7 @@ from utils.psha_results import (
     load_hazard_curves,
     load_hazard_map,
     model_label,
+    vs30_label,
     nearest_site,
 )
 from utils.psha_sites import build_sites, load_province_features, province_names
@@ -2388,7 +2389,7 @@ def render_publication_builder(
                         f"{hazard_manifest['openquake_version']}, model "
                         f"{model_label(hazard_manifest)} "
                         f"({hazard_manifest['model']['license']}); rerata logic tree, "
-                        f"Vs30 {hazard_manifest['site_condition']['vs30_m_s']:g} m/s, "
+                        f"{vs30_label(hazard_manifest['site_condition'])}, "
                         f"grid {publication_hazard_run.spacing:g}°"
                     ),
                 )
@@ -3299,10 +3300,12 @@ def render_psha_job_form() -> None:
         disabled=whole_country,
         placeholder="Pilih satu atau beberapa provinsi",
     )
+    # The 1 km grid is offered only in the wizard, which limits the site count.
+    options = [value for value in SPACING_OPTIONS if value >= 0.05]
     spacing = st.radio(
         "Jarak grid situs",
-        SPACING_OPTIONS,
-        index=SPACING_OPTIONS.index(0.2),
+        options,
+        index=options.index(0.2),
         format_func=lambda value: f"{value:g}° (±{value * 111:.0f} km)".replace(".", ","),
         horizontal=True,
         key="psha_new_spacing",
@@ -3513,7 +3516,7 @@ def render_psha_hazard(
         hazard_legend_labels(HAZARD_BREAKS_G[imt]),
         title=f"{imt} · {column.return_period_years:,} tahun (g)".replace(",", "."),
         subtitle=(
-            f"Rerata logic tree, Vs30 = {site_condition['vs30_m_s']:g} m/s, "
+            f"Rerata logic tree, {vs30_label(site_condition)}, "
             f"grid {run.spacing:g}°"
         ),
         source_html=(

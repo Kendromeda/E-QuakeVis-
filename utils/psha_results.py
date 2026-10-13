@@ -45,8 +45,20 @@ MODEL_BASES = {
 }
 
 
+def vs30_label(site_condition: dict[str, Any]) -> str:
+    """"Vs30 760 m/s" or "Vs30 USGS per situs (180-900, median 412 m/s)"."""
+    if site_condition.get("vs30_source") == "usgs":
+        return (f"Vs30 USGS per situs ({site_condition['vs30_min_m_s']:g}–"
+                f"{site_condition['vs30_max_m_s']:g}, median "
+                f"{site_condition['vs30_m_s']:g} m/s)")
+    return f"Vs30 {site_condition['vs30_m_s']:g} m/s"
+
+
 def model_label(manifest: dict[str, Any]) -> str:
     """For example "PuSGeN 2024 via GEM IDN v2024.0.0"."""
+    if manifest.get("source_model"):
+        return (f"Model sumber sendiri ({manifest['source_model']['name']}) + sesar/megathrust "
+                "PuSGeN 2024")
     version = str(manifest["model"]["model_version"])
     basis = next((label for prefix, label in MODEL_BASES.items()
                   if version.startswith(prefix)), "Model")

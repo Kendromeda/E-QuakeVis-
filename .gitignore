@@ -41,3 +41,9 @@ data/psha/iscgem/*.csv
 data/psha/iscgem/*.kmz
 data/psha/results/*/app_job.json
 data/psha/results/*/run.log
+# Tahap B: rebuilt by scripts/build_mw_catalog.py and scripts/build_source_model.py.
+data/psha/catalog/
+data/psha/source_models/
+# USGS global Vs30 (610 MB) and its Indonesian crop: scripts/prepare_usgs_vs30.py.
+data/vs30/download/
+data/vs30/*.npz

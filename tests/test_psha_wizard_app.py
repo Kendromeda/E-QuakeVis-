@@ -37,6 +37,11 @@ def test_wizard_walks_through_confirmed_steps(tmp_path, monkeypatch):
     assert any("Konfirmasi wilayah" in b.label for b in at.button)
 
     _button(at, "wizard_confirm_uji_region").click().run()
+    # The wizard is a fragment: AppTest overlays the shorter step 2 on step 1 and
+    # keeps step 1's trailing widgets (the browser drops them). The project is
+    # saved, so a fresh session continues at step 2.
+    at = AppTest.from_function(_wizard_script, default_timeout=120)
+    at.run()
     _button(at, "wizard_confirm_uji_source").click().run()
     project = json.loads((projects / "uji.json").read_text("utf-8"))
     assert set(project["confirmed"]) == {"region", "source"}
