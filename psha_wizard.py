@@ -21,7 +21,11 @@ from streamlit.errors import StreamlitAPIException
 
 from utils import gmpe_catalog as gc
 from utils import psha_project as pp
+from utils import source_model_store as sms
+from utils import vs30
+from utils.bbox_selection import format_bounds
 from utils.psha_jobs import (
+    MAX_SITES,
     OQ_PYTHON,
     SPACING_OPTIONS,
     PSHAJobError,
@@ -58,7 +62,11 @@ DEFAULT_PROVINCES = ["Nusa Tenggara Timur"]
 SOURCE_OPTIONS = {
     "v2024.0.0": "Tahap A – Model sumber GEM IDN v2024 (PuSGeN 2024)",
     "v2017.1.0": "Tahap A – Model sumber GEM IDN v2017 (PuSGeN 2017)",
+    "own": "Tahap B – Model sumber sendiri dari katalog (gempa latar) + sesar/megathrust "
+           "PuSGeN 2024",
 }
+# Tahap B keeps GEM v2024's rupture settings, GMPE choices and reqv tables.
+OWN_BASE_VERSION = "v2024.0.0"
 TRELLIS_MAGS = {
     "Active Shallow Crust": (5.5, 6.5, 7.5),
     "Subduction Interface": (7.0, 8.0, 9.0),
@@ -89,7 +97,31 @@ def _sites(provinces: tuple[str, ...], spacing: float,
     return build_sites(load_province_features(), provinces, spacing)
 
 
+@st.cache_resource(show_spinner=False)
+def _vs30_grid() -> dict:
+    return vs30.load_grid()
+
+
+@st.cache_data(show_spinner=False)
+def _usgs_vs30(sites: tuple[tuple[float, float], ...]) -> np.ndarray:
+    return vs30.sample([s[0] for s in sites], [s[1] for s in sites], _vs30_grid())
+
+
+def _vs30_text(region: dict[str, Any]) -> str:
+    if region.get("vs30_source") == "usgs":
+        return "Vs30 USGS per situs"
+    return f"Vs30 {region.get('vs30', 760.0):g} m/s"
+
+
+@st.cache_data(show_spinner=False)
+def _box_sites(bounds: tuple[float, ...], spacing: float) -> list[tuple[float, float]]:
+    """Land sites of every province that fall in the box."""
+    return build_sites(load_province_features(), None, spacing, bounds=tuple(bounds))
+
+
 def _region_sites(region: dict[str, Any]) -> list[tuple[float, float]]:
+    if region.get("bounds") and not region.get("provinces") and not region.get("kabupaten"):
+        return _box_sites(tuple(region["bounds"]), float(region["spacing"]))
     return _sites(tuple(region.get("provinces", [])), float(region["spacing"]),
                   tuple(region.get("kabupaten", [])))
 
@@ -97,7 +129,15 @@ def _region_sites(region: dict[str, Any]) -> list[tuple[float, float]]:
 def _region_label(region: dict[str, Any]) -> str:
     if region.get("kabupaten"):
         return "Kabupaten/kota " + ", ".join(region["kabupaten"])
+    if region.get("bounds") and not region.get("provinces"):
+        return "Kotak " + format_bounds(tuple(region["bounds"]))
     return ", ".join(region.get("provinces", []))
+
+
+def _source_label(source: dict[str, Any]) -> str:
+    if source.get("kind") == "own":
+        return f"{SOURCE_OPTIONS['own']} — model `{source.get('name', '?')}`"
+    return SOURCE_OPTIONS.get(source.get("version", ""), source.get("version", ""))
 
 
 @st.cache_data(show_spinner=False)
@@ -209,19 +249,40 @@ def _step_region(project: dict[str, Any]) -> None:
         "sampai 1000 km); wilayah kecil hanya mengurangi jumlah titik yang dihitung.\n"
         "- **Jarak grid** menentukan kerapatan titik. Makin rapat makin detail, tetapi "
         "waktu hitung naik sebanding jumlah situs.\n"
-        "- **Kondisi situs**: batuan referensi Vs30 = 760 m/s (batas kelas situs SB, "
-        "SNI 1726:2019), sama dengan peta gempa nasional. Efek tanah setempat ditambahkan "
-        "kemudian lewat koefisien situs.\n"
+        "- **Kondisi situs**: bawaannya batuan referensi Vs30 = 760 m/s (batas kelas situs "
+        "SB, SNI 1726:2019), sama dengan peta gempa nasional; efek tanah setempat ditambahkan "
+        "kemudian lewat koefisien situs. Pilihan lain: Vs30 USGS per situs (bahaya di "
+        "permukaan).\n"
+        "- **Grid 0,01° (±1 km)** hanya untuk wilayah kecil (kabupaten/kota atau kotak); "
+        "batasnya 10.000 situs.\n"
         "- **Periode ulang**: 475 tahun (10% dalam 50 tahun) dan 2.475 tahun (2% dalam "
         "50 tahun), untuk PGA, SA 0,2 detik, dan SA 1,0 detik."
     )
     region = project["region"]
-    levels = {"provinsi": "Provinsi", "kabupaten": "Kabupaten/kota"}
+    levels = {"provinsi": "Provinsi", "kabupaten": "Kabupaten/kota",
+              "kotak": "Kotak dari filter peta"}
+    saved_level = ("kabupaten" if region.get("kabupaten")
+                   else "kotak" if region.get("bounds") and not region.get("provinces")
+                   else "provinsi")
     level = st.radio("Tingkat wilayah", list(levels), format_func=levels.get, horizontal=True,
-                     index=1 if region.get("kabupaten") else 0,
+                     index=list(levels).index(saved_level),
                      key=f"wizard_level_{project['id']}")
     kabupaten: list[str] = []
-    if level == "kabupaten":
+    bounds = None
+    if level == "kotak":
+        selected = st.session_state.get("selection_bbox")
+        bounds = tuple(selected) if selected else (
+            tuple(region["bounds"]) if region.get("bounds") else None)
+        if bounds is None:
+            st.info("Belum ada kotak. Gambar kotak di peta sebaran, atau isi koordinat "
+                    "North/West/East/South di sidebar **Filter**, lalu kembali ke sini.")
+            return
+        st.markdown(f"Kotak yang dipakai: **{format_bounds(bounds)}**"
+                    + ("" if selected else " (tersimpan di proyek; filter peta kosong)"))
+        st.caption("Situs adalah titik daratan di dalam kotak. Untuk Tahap B, gempa diambil "
+                   "dari kotak ini ditambah buffer (langkah 2).")
+        provinces = []
+    elif level == "kabupaten":
         names = _province_names()
         current = (region.get("provinces") or DEFAULT_PROVINCES)[0]
         province = st.selectbox("Provinsi", names,
@@ -244,22 +305,51 @@ def _step_region(project: dict[str, Any]) -> None:
         index=SPACING_OPTIONS.index(spacing_now if spacing_now in SPACING_OPTIONS else 0.2),
         format_func=lambda v: f"{v:g}° (±{v * 111:.1f} km)".replace(".", ","),
         horizontal=True, key=f"wizard_spacing_{project['id']}")
-    if not provinces or (level == "kabupaten" and not kabupaten):
+    if level != "kotak" and (not provinces or (level == "kabupaten" and not kabupaten)):
         st.warning("Pilih minimal satu wilayah.")
         return
-    sites = _sites(tuple(provinces), float(spacing), tuple(kabupaten))
+    if level == "kotak":
+        sites = _box_sites(tuple(bounds), float(spacing))
+    else:
+        sites = _sites(tuple(provinces), float(spacing), tuple(kabupaten))
     cols = st.columns(3)
     cols[0].metric("Jumlah situs", f"{len(sites):,}".replace(",", "."))
-    cols[1].metric("Vs30 referensi", "760 m/s")
+    cols[1].metric("Jarak antar situs", f"±{float(spacing) * 111:.1f} km".replace(".", ","))
     cols[2].metric("Perkiraan waktu (13 GMPE)", format_duration(
         estimate_runtime_seconds(len(sites))))
+    conditions = {"reference": "Batuan referensi Vs30 760 m/s (bawaan, setara peta nasional)",
+                  "usgs": "Vs30 USGS per situs (proxy kemiringan topografi, Heath dkk. 2020)"}
+    vs30_source = st.radio("Kondisi situs", list(conditions), format_func=conditions.get,
+                           index=1 if region.get("vs30_source") == "usgs" else 0,
+                           key=f"wizard_vs30_{project['id']}")
+    if vs30_source == "usgs" and sites:
+        try:
+            values = _usgs_vs30(tuple(sites))
+        except vs30.Vs30Error as exc:
+            st.error(str(exc))
+            return
+        st.caption(
+            f"Vs30 di {len(sites)} situs: {values.min():.0f}–{values.max():.0f} m/s, median "
+            f"{np.median(values):.0f} m/s. Hasilnya bahaya di **permukaan** (termasuk "
+            "amplifikasi tanah dari GMPE), jadi tidak bisa dibandingkan langsung dengan peta "
+            "SNI di batuan. Nilai USGS adalah proxy kasar dari kemiringan topografi, bukan "
+            "pengukuran; untuk kajian lokal gunakan data mikrotremor/MASW/bor.")
+        st.dataframe(vs30.class_summary(values), hide_index=True, use_container_width=True)
+    too_many = len(sites) > MAX_SITES
+    if too_many:
+        st.error(f"{len(sites):,} situs terlalu banyak (batas {MAX_SITES:,}, sekitar sehari "
+                 "hitung di laptop ini). Grid 1 km cocok untuk satu kabupaten/kota atau kotak "
+                 "kecil; untuk provinsi pakai 0,05° atau lebih.".replace(",", "."))
     if sites:
-        st.map(pd.DataFrame(sites, columns=["lon", "lat"]), latitude="lat", longitude="lon",
-               size=1500, height=320)
+        st.map(pd.DataFrame(sites[:20000], columns=["lon", "lat"]), latitude="lat",
+               longitude="lon", size=max(150, int(spacing * 15000)), height=320)
     note = _notes(project, "region", "Catatan: mengapa wilayah dan grid ini dipilih?")
-    if _confirm_button(project, "region", "Konfirmasi wilayah", disabled=not sites):
+    if _confirm_button(project, "region", "Konfirmasi wilayah",
+                       disabled=not sites or too_many):
         project["region"] = {"provinces": provinces, "kabupaten": kabupaten,
-                             "spacing": float(spacing), "vs30": 760.0}
+                             "spacing": float(spacing), "vs30": 760.0,
+                             "vs30_source": vs30_source,
+                             **({"bounds": [float(v) for v in bounds]} if bounds else {})}
         project.setdefault("notes", {})["region"] = note
         _commit(project, "region")
 
@@ -279,18 +369,21 @@ def _step_source(project: dict[str, Any]) -> None:
         "**Apa yang diputuskan:** model sumber gempa, yaitu *di mana*, *seberapa besar*, dan "
         "*seberapa sering* gempa terjadi. Model ini dibangun dari katalog gempa (yang sudah "
         "dideklasterisasi), data sesar (slip rate), dan geometri megathrust.\n\n"
-        "**Tahap A** (sekarang) memakai model sumber yang sudah dibangun tim PuSGeN dan "
-        "diimplementasikan GEM, supaya fokus Anda di langkah GMPE dan logic tree. **Tahap B** "
-        "(model sumber buatan sendiri dari katalog Mw gabungan, deklasterisasi, dan nilai "
-        "a-b) akan muncul sebagai pilihan di sini setelah dibangun."
+        "**Tahap A** memakai model sumber yang sudah dibangun tim PuSGeN dan diimplementasikan "
+        "GEM. **Tahap B** membangun gempa latar sendiri dari katalog Mw gabungan (ISC dan "
+        "ISC-GEM) untuk wilayah langkah 1: deklasterisasi, kelengkapan, nilai a-b, lalu "
+        "penghalusan; sesar dan megathrust tetap dari PuSGeN 2024 karena geometri dan laju "
+        "slip-nya tidak bisa diturunkan dari katalog."
     )
-    current = project["source_model"].get("version", "v2024.0.0")
+    saved = project["source_model"]
+    current = "own" if saved.get("kind") == "own" else saved.get("version", "v2024.0.0")
     options = list(SOURCE_OPTIONS)
     version = st.radio("Model sumber", options, format_func=SOURCE_OPTIONS.get,
                        index=options.index(current) if current in options else 0,
                        key=f"wizard_source_{project['id']}")
-    st.info("Tahap B – model sumber buatan sendiri: belum tersedia (sedang dibangun dari "
-            "katalog ISC/ISC-GEM/BMKG).", icon="🛠️")
+    if version == "own":
+        _own_source_step(project)
+        return
     try:
         summary = _source_summary(version)
         trts = _source_trts(version)
@@ -314,12 +407,152 @@ def _step_source(project: dict[str, Any]) -> None:
         + ". Di langkah berikutnya Anda memilih GMPE untuk masing-masing.")
     note = _notes(project, "source", "Catatan: alasan memilih model sumber ini")
     if _confirm_button(project, "source", "Konfirmasi model sumber"):
-        if project["source_model"].get("version") != version:
+        if project["source_model"].get("version") != version or saved.get("kind") == "own":
             project["gmpe_logic_tree"] = {}
             st.session_state.pop(f"wizard_lt_seeded_{project['id']}", None)
         project["source_model"] = {"kind": "gem", "version": version, "trts": trts}
         project.setdefault("notes", {})["source"] = note
         _commit(project, "source")
+
+
+def _region_bounds(region: dict[str, Any]) -> tuple | None:
+    if region.get("bounds"):
+        return tuple(region["bounds"])
+    sites = _region_sites(region)
+    return sms.bounds_from_sites(sites, float(region["spacing"])) if sites else None
+
+
+def _own_source_step(project: dict[str, Any]) -> None:
+    """Tahap B: build the source model from the catalogue for the region's box."""
+    bounds = _region_bounds(project["region"])
+    if bounds is None:
+        st.warning("Wilayah langkah 1 tidak punya situs.")
+        return
+    saved = project["source_model"] if project["source_model"].get("kind") == "own" else {}
+    options = {**sms.DEFAULT_OPTIONS, **saved.get("options", {})}
+    st.markdown(
+        f"**Kotak situs:** {format_bounds(bounds)}. Gempa diambil dari kotak ini ditambah "
+        "buffer, karena sumber di luar kotak tetap mengguncang situs di dalamnya.\n\n"
+        "1. **Katalog Mw gabungan**: satu Mw per gempa (Mw langsung > proxy ISC-GEM > "
+        "konversi skala lain).\n"
+        "2. **Deklasterisasi** Gardner–Knopoff (1974): gempa susulan dan pendahulu dibuang "
+        "karena PSHA mengasumsikan gempa utama saling bebas (proses Poisson).\n"
+        "3. **Kelengkapan** Stepp (1972): sejak tahun berapa gempa tiap ukuran tercatat "
+        "lengkap.\n"
+        "4. **Nilai a-b** Weichert (1980) per lapisan kedalaman (seperti 6 lapisan PuSGeN).\n"
+        "5. **Penghalusan** Frankel (1995): laju gempa disebar dengan kernel Gaussian.\n"
+        "6. **Sesar dan megathrust PuSGeN 2024** yang dekat kotak ditambahkan.")
+    pid = project["id"]
+    cols = st.columns(3)
+    buffer_km = cols[0].number_input("Buffer sumber (km)", 100.0, 600.0,
+                                     float(options["buffer_km"]), 50.0, key=f"sm_buf_{pid}",
+                                     help="Gempa dan sesar sejauh ini dari kotak ikut dihitung "
+                                          "(megathrust sampai 1000 km).")
+    min_mw = cols[1].number_input("Mw minimum untuk laju", 4.0, 5.5, float(options["min_mw"]),
+                                  0.1, key=f"sm_mmin_{pid}",
+                                  help="Konversi magnitudo hanya sah di atas ±Mw 4,5.")
+    smoothing = cols[2].number_input("Jarak penghalusan (km)", 10.0, 150.0,
+                                     float(options["smoothing_km"]), 5.0, key=f"sm_smooth_{pid}")
+    cols = st.columns(3)
+    mmax_shallow = cols[0].number_input("Mmax gempa latar dangkal", 5.5, 7.5,
+                                        float(options["mmax_shallow"]), 0.1,
+                                        key=f"sm_mmax_s_{pid}",
+                                        help="Gempa lebih besar ditanggung sesar dan megathrust "
+                                             "(PuSGeN: 6,5).")
+    mmax_slab = cols[1].number_input("Mmax gempa latar intraslab", 6.5, 8.5,
+                                     float(options["mmax_slab"]), 0.1, key=f"sm_mmax_d_{pid}")
+    unreviewed = cols[2].checkbox("Sertakan gempa belum direview ISC (±24 bulan terakhir)",
+                                  value=bool(options["include_unreviewed"]),
+                                  key=f"sm_unrev_{pid}")
+    chosen = {"buffer_km": buffer_km, "min_mw": min_mw, "smoothing_km": smoothing,
+              "mmax_shallow": mmax_shallow, "mmax_slab": mmax_slab,
+              "include_unreviewed": unreviewed}
+
+    name = sms.model_name(pid)
+    model = sms.load_source_model(name)
+    stale = model is not None and (
+        [round(v, 4) for v in model.manifest.get("site_bounds", [])]
+        != [round(v, 4) for v in bounds])
+    if st.button("Bangun ulang model sumber" if model else "Bangun model sumber",
+                 key=f"sm_build_{pid}"):
+        with st.spinner("Membangun model sumber (katalog, deklasterisasi, a-b, "
+                        "penghalusan, sesar)..."):
+            try:
+                model = sms.build_source_model(name, bounds, chosen, OQ_PYTHON)
+                stale = False
+            except sms.SourceModelError as exc:
+                st.error(str(exc))
+                return
+    if model is None:
+        st.info("Model sumber belum dibangun untuk proyek ini.")
+        return
+    if stale:
+        st.warning("Model sumber dibangun untuk kotak lain. Bangun ulang supaya sesuai "
+                   "wilayah langkah 1.")
+    elif model.options != {k: (bool(v) if k == "include_unreviewed" else float(v))
+                           for k, v in chosen.items()}:
+        st.warning("Pengaturan di atas berbeda dari model yang sudah dibangun. Tekan "
+                   "**Bangun ulang model sumber** untuk memakainya; tabel di bawah masih "
+                   "hasil pengaturan lama.")
+    _own_source_report(model)
+    note = _notes(project, "source", "Catatan: alasan memilih model sumber ini")
+    if _confirm_button(project, "source", "Konfirmasi model sumber", disabled=stale):
+        if saved.get("name") != name or project["source_model"].get("kind") != "own":
+            project["gmpe_logic_tree"] = {}
+            st.session_state.pop(f"wizard_lt_seeded_{pid}", None)
+        project["source_model"] = {
+            "kind": "own", "version": OWN_BASE_VERSION, "name": name,
+            "path": str(model.path.relative_to(sms.ROOT)).replace("\\", "/"),
+            "bounds": list(bounds), "options": model.options,
+            "trts": model.tectonic_regions}
+        project.setdefault("notes", {})["source"] = note
+        _commit(project, "source")
+
+
+def _own_source_report(model: sms.SourceModel) -> None:
+    manifest = model.manifest
+    counts = manifest.get("counts", {})
+    sel, dec = counts.get("selection", {}), counts.get("declustering", {})
+    for warning in manifest.get("warnings", []):
+        st.warning(warning)
+    cols = st.columns(4)
+    cols[0].metric("Gempa terpilih", f"{sel.get('selected', 0):,}".replace(",", "."))
+    cols[1].metric("Gempa utama", f"{dec.get('mainshocks', 0):,}".replace(",", "."))
+    cols[2].metric("Dibuang (susulan/pendahulu)",
+                   f"{dec.get('removed', 0):,}".replace(",", "."))
+    cols[3].metric("Tahun akhir katalog", manifest.get("end_year", "-"))
+    try:
+        summary = model.table("source_model_summary.csv")
+        ab = model.table("05_ab_values.csv")
+        completeness = model.table("04_completeness.csv")
+    except sms.SourceModelError as exc:
+        st.error(str(exc))
+        return
+    st.markdown("**Ringkasan model sumber** (satu baris per sumber)")
+    st.dataframe(summary[["source_id", "source_type", "tectonic_region", "depth_layer",
+                          "n_sources", "b_value", "mmin", "mmax", "annual_rate_mw_ge_mmin",
+                          "rate_mw_ge_5_per_year", "rate_mw_ge_7_per_year", "note"]],
+                 hide_index=True, use_container_width=True)
+    left, right = st.columns(2)
+    left.markdown("**Nilai a-b per lapisan (Weichert)**")
+    left.dataframe(ab[["depth_layer", "n_events", "n_used_complete", "b_value", "b_sigma",
+                       "a_value", "mw_max_observed", "reliable"]],
+                   hide_index=True, use_container_width=True)
+    right.markdown("**Kelengkapan katalog (Stepp)**")
+    right.dataframe(completeness, hide_index=True, use_container_width=True)
+    workbook = model.path / sms.WORKBOOK
+    cols = st.columns(2)
+    if workbook.is_file():
+        cols[0].download_button(
+            "Unduh analisis lengkap (Excel, satu sheet per langkah)", workbook.read_bytes(),
+            file_name=f"{model.name}_{sms.WORKBOOK}",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            key=f"sm_dl_xlsx_{model.name}")
+    cols[1].download_button(
+        "Unduh ringkasan model sumber (CSV)", summary.to_csv(index=False).encode("utf-8"),
+        file_name=f"{model.name}_source_model_summary.csv", mime="text/csv",
+        key=f"sm_dl_csv_{model.name}")
+    st.caption(f"Semua tabel per langkah (CSV) ada di `{model.path.relative_to(sms.ROOT)}`.")
 
 
 # --- Step 3: GMPE logic tree -------------------------------------------------------
@@ -547,8 +780,8 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
     cols[3].metric("Perkiraan waktu", format_duration(estimate))
     st.markdown(
         f"- **Wilayah:** {escape_html(_region_label(region))}, grid "
-        f"{region['spacing']:g}°, Vs30 {region['vs30']:g} m/s\n"
-        f"- **Model sumber:** {escape_html(SOURCE_OPTIONS.get(version, version))}\n"
+        f"{region['spacing']:g}°, {_vs30_text(region)}\n"
+        f"- **Model sumber:** {escape_html(_source_label(project['source_model']))}\n"
         "- **Keluaran:** kurva hazard rerata dan peta PGA, SA 0,2, SA 1,0 untuk 475 dan "
         "2.475 tahun")
     st.dataframe(_logic_tree_table(tree), hide_index=True, use_container_width=True)
@@ -590,10 +823,15 @@ def _step_review(project: dict[str, Any], results_dir: Path) -> None:
     if st.button("Mulai perhitungan PSHA", type="primary", disabled=not reviewed,
                  key=f"wizard_start_{project['id']}"):
         run_id = f"{project['id']}_run{len(mine) + 1}"
+        source = project["source_model"]
+        own = sms.ROOT / source["path"] if source.get("kind") == "own" else None
+        box = region.get("bounds") if not region.get("provinces") else None
         try:
             start_job(run_id, region["provinces"], float(region["spacing"]), len(sites),
                       results_dir, model_version=version, gmm_logic_tree=tree,
-                      project_id=project["id"], kabupaten=region.get("kabupaten", []))
+                      project_id=project["id"], kabupaten=region.get("kabupaten", []),
+                      bounds=box, source_model=own,
+                      vs30_source=region.get("vs30_source", "reference"))
         except (PSHAJobError, OSError) as exc:
             st.error(f"Perhitungan tidak dapat dimulai: {exc}")
             return

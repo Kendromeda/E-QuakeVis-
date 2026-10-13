@@ -35,6 +35,8 @@ import subprocess
 import sys
 import time
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from utils.gmpe_catalog import write_gmm_logic_tree  # noqa: E402
@@ -149,8 +151,16 @@ def write_job(run_dir: Path, args: argparse.Namespace) -> None:
     gmm_lt = "gmmLT.xml" if args.gmm_lt_json else f"{model_in}/gmmLT.xml"
     distances = ", ".join(f"'{trt}': {km:g}" for trt, km in model.maximum_distance_km.items())
     reqv = ",\n  ".join(f'"{trt}": "{model_in}/{name}"' for trt, name in model.reqv.items())
+    # A Tahap B source model (scripts/build_source_model.py) replaces GEM's sources;
+    # GEM's rupture settings (reqv tables, mesh spacing, distances) stay.
+    if getattr(args, "source_model", None):
+        ssm_lt = os.path.relpath(args.source_model / "ssmLT.xml", run_dir).replace("\\", "/")
+        described = f"model sumber {args.source_model.name}"
+    else:
+        ssm_lt = f"{model_in}/{model.source_logic_tree}"
+        described = f"GEM IDN {args.model}"
     job = f"""[general]
-description = E-QuakeVis PSHA {args.run_id} (GEM IDN {args.model})
+description = E-QuakeVis PSHA {args.run_id} ({described})
 calculation_mode = classical
 random_seed = 23
 
@@ -173,7 +183,7 @@ reference_depth_to_1pt0km_per_sec = {_depth(model.z1pt0_m)}
 reference_depth_to_2pt5km_per_sec = {_depth(model.z2pt5_km)}
 
 [calculation]
-source_model_logic_tree_file = {model_in}/{model.source_logic_tree}
+source_model_logic_tree_file = {ssm_lt}
 gsim_logic_tree_file = {gmm_lt}
 investigation_time = {INVESTIGATION_TIME}
 intensity_measure_types_and_levels = {{
@@ -237,6 +247,9 @@ def main() -> int:
                         help="limit sites to these kabupaten/kota (overrides --provinces)")
     parser.add_argument("--spacing", type=float, default=0.1, help="site spacing in degrees")
     parser.add_argument("--vs30", type=float, default=760.0, help="reference Vs30 (m/s)")
+    parser.add_argument("--vs30-source", choices=["reference", "usgs"], default="reference",
+                        help="'usgs': Vs30 per site from the USGS global proxy grid "
+                             "(scripts/prepare_usgs_vs30.py) instead of one reference value")
     parser.add_argument(
         "--ps-grid-spacing", type=float, default=0.0,
         help="km; OpenQuake grids distant point sources (0 = exact, slower)")
@@ -245,8 +258,25 @@ def main() -> int:
         "--gmm-lt-json", type=Path,
         help="GMPE logic tree chosen by the user: {trt: [{gmpe, weight}]} (JSON); "
              "default is the model's own gmmLT.xml")
+    parser.add_argument(
+        "--source-model", type=Path,
+        help="Tahap B source model folder (scripts/build_source_model.py) instead of GEM's "
+             "sources; its site box is used unless --provinces/--kabupaten/--bounds is given")
+    parser.add_argument("--bounds", nargs=4, type=float,
+                        metavar=("WEST", "SOUTH", "EAST", "NORTH"),
+                        help="limit sites to land points in this box")
     parser.add_argument("--dry-run", action="store_true", help="write sites and job.ini only")
     args = parser.parse_args()
+    source_manifest = None
+    if args.source_model:
+        args.source_model = args.source_model.resolve()
+        manifest_path = args.source_model / "manifest.json"
+        if not (args.source_model / "ssmLT.xml").is_file() or not manifest_path.is_file():
+            raise SystemExit(f"{args.source_model} is not a finished source model "
+                             "(no ssmLT.xml/manifest.json)")
+        source_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        if not (args.bounds or args.provinces or args.kabupaten):
+            args.bounds = source_manifest["site_bounds"]
 
     model = MODELS[args.model]
     model_dir = model.directory(args.model)
@@ -257,17 +287,35 @@ def main() -> int:
     run_dir = RESULTS_DIR / args.run_id
     run_dir.mkdir(parents=True, exist_ok=True)
     try:
+        box = tuple(args.bounds) if args.bounds else None
         if args.kabupaten:
             sites = build_sites(load_kabupaten_features(), args.kabupaten, args.spacing,
-                                key=KABUPATEN_KEY)
+                                key=KABUPATEN_KEY, bounds=box)
         else:
-            sites = build_sites(load_province_features(), args.provinces, args.spacing)
+            sites = build_sites(load_province_features(), args.provinces, args.spacing,
+                                bounds=box)
     except ValueError as exc:
         raise SystemExit(str(exc)) from exc
     if not sites:
         raise SystemExit("No land sites in the selected area.")
+    vs30_values = None
+    if args.vs30_source == "usgs":
+        # A site model (sites.csv with vs30 columns, like GEM's iid-10km.csv):
+        # each site gets the USGS proxy Vs30; basin depths follow from Vs30.
+        from utils.vs30 import Vs30Error, load_grid, sample
+
+        try:
+            vs30_values = sample([s[0] for s in sites], [s[1] for s in sites], load_grid())
+        except Vs30Error as exc:
+            raise SystemExit(str(exc)) from exc
     with (run_dir / "sites.csv").open("w", newline="", encoding="utf-8") as handle:
-        csv.writer(handle).writerows(sites)
+        writer = csv.writer(handle)
+        if vs30_values is None:
+            writer.writerows(sites)
+        else:
+            writer.writerow(["lon", "lat", "vs30", "z1pt0", "z2pt5", "vs30measured"])
+            writer.writerows([(lon, lat, f"{vs30:g}", -999, -999, 0)
+                              for (lon, lat), vs30 in zip(sites, vs30_values)])
     gmm_logic_tree = None
     if args.gmm_lt_json:
         gmm_logic_tree = json.loads(args.gmm_lt_json.read_text(encoding="utf-8"))
@@ -302,13 +350,29 @@ def main() -> int:
         "model": {key: model_info[key] for key in
                   ("name", "model_version", "authors", "license", "source", "documentation")},
         "region": {"provinces": args.provinces or "all", "spacing_degrees": args.spacing,
-                   **({"kabupaten": args.kabupaten} if args.kabupaten else {})},
+                   **({"kabupaten": args.kabupaten} if args.kabupaten else {}),
+                   **({"bounds": list(args.bounds)} if args.bounds else {})},
+        **({"source_model": {
+            "name": args.source_model.name,
+            "path": os.path.relpath(args.source_model, ROOT).replace("\\", "/"),
+            "created_utc": source_manifest["created_utc"],
+            "description": "Tahap B: gempa latar dari katalog sendiri; sesar dan megathrust "
+                           "PuSGeN 2024 via GEM IDN v2024",
+        }} if args.source_model else {}),
         "num_sites": len(sites),
         "approximations": {"ps_grid_spacing_km": args.ps_grid_spacing,
                            "pointsource_distance_km": POINTSOURCE_DISTANCE_KM,
                            "maximum_distance_km": model.maximum_distance_km},
-        "site_condition": {"vs30_m_s": args.vs30, "vs30_type": "measured",
-                           "z1pt0_m": model.z1pt0_m, "z2pt5_km": model.z2pt5_km},
+        "site_condition": ({"vs30_m_s": args.vs30, "vs30_type": "measured",
+                            "z1pt0_m": model.z1pt0_m, "z2pt5_km": model.z2pt5_km}
+                           if vs30_values is None else
+                           {"vs30_m_s": float(np.median(vs30_values)), "vs30_source": "usgs",
+                            "vs30_type": "inferred (topographic-slope proxy)",
+                            "vs30_min_m_s": float(vs30_values.min()),
+                            "vs30_max_m_s": float(vs30_values.max()),
+                            "z1pt0_m": None, "z2pt5_km": None,
+                            "citation": "Heath et al. (2020), Earthquake Spectra 36(3)",
+                            "note": "vs30_m_s is the median; per-site values are in sites.csv"}),
         "investigation_time_years": INVESTIGATION_TIME,
         "poes": list(POES),
         "return_periods_years": [round(return_period(p)) for p in POES],

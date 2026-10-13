@@ -584,6 +584,9 @@ dibandingkan dengan PGA (MCE_G) SNI pada kelas situs SB sebagai pemeriksaan.
   https://doi.org/10.31905/D808B830. Bebas dipakai dengan sitasi.
 - Pengunduh: `python scripts/download_isc_bulletin.py`. Unduhannya bisa
   dilanjutkan, memakai jeda 15 detik, dan menunggu bila ISC membalas HTTP 429.
+- Pita tepi (`--stage margins`): M ≥ 4 di sekeliling kotak di atas sejauh 3,5°
+  (lat -15..10, lon 91..145), jendela tahunan. Pita ini dibutuhkan model sumber
+  Tahap B: buffer 300 km di sekitar provinsi tepi melewati kotak utama.
 - Pencocokan dan regresi: `.venv-oq\Scripts\python.exe scripts/match_bmkg_isc.py`
   (dijalankan di `.venv-oq` agar grafik matplotlib ikut dibuat).
   - Pencocokan memakai origin BMKG (DJA) di buletin ISC (≤5 detik, ≤50 km); bila
@@ -596,6 +599,61 @@ dibandingkan dengan PGA (MCE_G) SNI pada kelas situs SB sebagai pemeriksaan.
   sehingga regresi terpotong di bagian bawah dan konversi di bawah ±M 4,8
   adalah ekstrapolasi. Gunakan persamaan hanya di dalam `valid_range` dan
   perlakukan konversi magnitudo kecil dengan hati-hati.
+
+### Katalog Mw gabungan (Tahap B)
+
+- Folder: `psha/catalog/`, dibuat oleh `scripts/build_mw_catalog.py` (sekali,
+  setelah unduhan ISC dan `match_bmkg_isc.py`). Hanya katalog ringkas ini yang
+  dibaca model sumber; buletin ISC mentah tidak dimuat ulang per wilayah.
+- Satu Mw per gempa (`utils/mw_catalog.py`): Mw langsung dari momen seismik
+  (GCMT > ISC-GEM > NEIC Mww > NEIC Mw > GFZ > lainnya, bukan Mw BMKG) > proxy
+  Mw ISC-GEM > konversi. Konversi memakai regresi GOR di dalam buletin ISC
+  (DJA, ISC mb, ISC MS, NEIC mb termasuk kode lama USCGS/NEIS), hanya di dalam
+  rentang data regresinya; MS dibatasi ≤ 6,1 karena hubungan MS–Mw bilinear
+  (Scordilis, 2006). Bila beberapa konversi berlaku, Mw adalah rerata berbobot
+  1/σ². Rumus MLv katalog BMKG (kemiringan 0,42, terpotong) tidak dipakai.
+- Pembersihan: episenter utama di luar kotak unduhan dibuang, laporan ganda satu
+  gempa (≤ 16 detik, ≤ 100 km) dibuang, gempa yang hanya ada di ISC-GEM
+  ditambahkan, kedalaman tetap (0/10/33 km) ditandai, dan gempa 24 bulan
+  terakhir ditandai "kemungkinan belum direview ISC".
+- Keluaran: `mw_catalog.csv` dan CSV pemrosesan (`*_processing`, `*_sources`,
+  `*_conversions`, `*_by_decade`, `*_excluded_review`, `*_duplicates`), serta
+  semuanya dalam satu workbook `analisis_katalog_mw.xlsx`.
+
+### Model sumber Tahap B (per kotak wilayah)
+
+- Pembangun: `scripts/build_source_model.py --name <nama> --bounds W S E N`
+  (di `.venv-oq`, memakai HMTK), atau tombol di langkah 2 wizard. Keluaran di
+  `psha/source_models/<nama>/`, dijelaskan di `00_files.csv`, dan semua tabel
+  dalam satu workbook `analisis_model_sumber.xlsx` (satu sheet per langkah).
+- Langkah: wilayah sumber = kotak situs + buffer 300 km → seleksi katalog
+  (Mw ≥ 4) → deklasterisasi Gardner–Knopoff (1974) → kelengkapan Stepp (1972)
+  → a-b Weichert (1980) per enam lapisan kedalaman GEM/PuSGeN (0–25, 25–50,
+  50–100, 100–150, 150–200, 200–300 km; Mw ≥ 4,5) → penghalusan Frankel (1995)
+  kernel Gaussian 50 km, grid 0,1° → sesar kerak dan megathrust PuSGeN 2024 dari
+  GEM IDN v2024 dalam 300/1000 km dari kotak → `nrml/*.xml` dan `ssmLT.xml`.
+- Gempa latar memakai pengaturan rupture lapisan GEM (bidang nodal, WC1994,
+  kedalaman hiposenter) dan Mmax 6,5 (dangkal, gempa lebih besar di sesar) /
+  7,8 (intraslab). Lapisan dengan < 50 gempa di periode lengkap memakai b
+  regional. Gempa di bawah 300 km dihitung a-b-nya tetapi tidak dimodelkan.
+- Hazard: `scripts/run_psha.py --source-model psha/source_models/<nama>`; GMPE,
+  tabel reqv, dan jarak maksimum tetap mengikuti GEM IDN v2024.
+
+### Vs30 USGS per situs (opsional)
+
+- Sumber: USGS Global Hybrid Vs30 (Heath dkk., 2020, *Earthquake Spectra* 36(3),
+  1570–1584), grid 30 detik busur, https://apps.usgs.gov/shakemap_geodata/vs30/
+  `global_vs30.grd` (netCDF4, ±610 MB; disimpan di `vs30/download/`, tidak di Git).
+- `scripts/prepare_usgs_vs30.py` memotongnya ke lat -15..10, lon 91..145 menjadi
+  `vs30/usgs_vs30_indonesia.npz` (int16, 5 MB, tidak di Git); `vs30/manifest.json`
+  mencatat URL, SHA-256, dan sitasi. Di Indonesia nilainya 180–900 m/s.
+- Dipakai bila kondisi situs "Vs30 USGS per situs" dipilih di wizard
+  (`run_psha.py --vs30-source usgs`): `sites.csv` run berisi kolom `vs30`
+  (seperti `iid-10km.csv` GEM), z1.0/z2.5 diturunkan GMPE dari Vs30. Hasilnya
+  bahaya di **permukaan**, tidak setara peta SNI di batuan. Nilainya proxy
+  kemiringan topografi, bukan pengukuran.
+- Grid situs 0,01° (±1 km) tersedia di wizard untuk wilayah kecil (batas 10.000
+  situs); grid dibangun hanya di dalam kotak wilayah.
 
 ### Katalog ISC-GEM v12.1
 

@@ -14,7 +14,7 @@ from typing import Any, Iterable
 
 import numpy as np
 from shapely import contains_xy
-from shapely.geometry import shape
+from shapely.geometry import box as shapely_box, shape
 
 ROOT = Path(__file__).resolve().parents[1]
 PROVINCES_PATH = ROOT / "data" / "provinsi_indonesia_38.geojson"
@@ -53,11 +53,14 @@ def build_sites(
     areas: Iterable[str] | None,
     spacing: float,
     key: str = PROVINCE_KEY,
+    bounds: tuple[float, float, float, float] | None = None,
 ) -> list[tuple[float, float]]:
     """Grid nodes that fall on land in ``areas`` (every feature when empty).
 
     ``key`` is the property naming each area: ``PROVINCE_KEY`` for provinces,
-    ``KABUPATEN_KEY`` for kabupaten/kota.
+    ``KABUPATEN_KEY`` for kabupaten/kota. ``bounds`` (west, south, east, north)
+    keeps only nodes inside that box; the grid is built for the box only, so
+    fine grids (1 km) stay fast.
     """
     if spacing <= 0:
         raise ValueError("Jarak grid harus positif.")
@@ -70,16 +73,25 @@ def build_sites(
     # Some source polygons are topologically invalid, so test each one instead
     # of unioning them.
     polygons = [shape(f["geometry"]) for f in features if f.get("geometry")]
+    if bounds is not None:
+        box = shapely_box(*bounds)
+        polygons = [p for p in polygons if p.intersects(box)]
     if not polygons:
         return []
-    bounds = np.array([p.bounds for p in polygons])
-    west, south = bounds[:, :2].min(axis=0)
-    east, north = bounds[:, 2:].max(axis=0)
+    extent = np.array([p.bounds for p in polygons])
+    west, south = extent[:, :2].min(axis=0)
+    east, north = extent[:, 2:].max(axis=0)
+    if bounds is not None:
+        west, south = max(west, bounds[0]), max(south, bounds[1])
+        east, north = min(east, bounds[2]), min(north, bounds[3])
     lons = np.arange(math.floor(west / spacing), math.ceil(east / spacing) + 1) * spacing
     lats = np.arange(math.floor(south / spacing), math.ceil(north / spacing) + 1) * spacing
     grid_lon, grid_lat = np.meshgrid(lons, lats)
     inside = np.zeros(grid_lon.shape, dtype=bool)
     for polygon in polygons:
         inside |= contains_xy(polygon, grid_lon, grid_lat)
+    if bounds is not None:
+        inside &= ((grid_lon >= bounds[0] - 1e-9) & (grid_lon <= bounds[2] + 1e-9)
+                   & (grid_lat >= bounds[1] - 1e-9) & (grid_lat <= bounds[3] + 1e-9))
     return [(round(float(x), 4), round(float(y), 4))
             for x, y in zip(grid_lon[inside], grid_lat[inside])]
