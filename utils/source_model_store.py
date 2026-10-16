@@ -23,8 +23,20 @@ BUILD_SCRIPT = ROOT / "scripts" / "build_source_model.py"
 WORKBOOK = "analisis_model_sumber.xlsx"
 # A national box with many faults takes a few minutes; small boxes far less.
 BUILD_TIMEOUT_SECONDS = 1800
+# start_year/end_year None: every catalogue year (Stepp still sets completeness).
 DEFAULT_OPTIONS = {"buffer_km": 300.0, "min_mw": 4.5, "smoothing_km": 50.0,
-                   "mmax_shallow": 6.5, "mmax_slab": 7.8, "include_unreviewed": False}
+                   "mmax_shallow": 6.5, "mmax_slab": 7.8, "include_unreviewed": False,
+                   "start_year": None, "end_year": None}
+
+
+def normalize_options(options: dict) -> dict[str, Any]:
+    """Builder options with their types (floats, a bool, years as int or None)."""
+    opts = {**DEFAULT_OPTIONS, **options}
+    years = {key: None if opts[key] is None else int(opts[key])
+             for key in ("start_year", "end_year")}
+    return {**{key: float(opts[key]) for key in
+               ("buffer_km", "min_mw", "smoothing_km", "mmax_shallow", "mmax_slab")},
+            "include_unreviewed": bool(opts["include_unreviewed"]), **years}
 
 
 class SourceModelError(RuntimeError):
@@ -51,15 +63,17 @@ class SourceModel:
     def options(self) -> dict[str, Any]:
         """The builder options the model was made with (keys of ``DEFAULT_OPTIONS``)."""
         settings = self.manifest.get("settings", {})
-        return {"buffer_km": float(self.manifest.get("buffer_km", DEFAULT_OPTIONS["buffer_km"])),
-                "min_mw": float(settings.get("min_mw_rates", DEFAULT_OPTIONS["min_mw"])),
-                "smoothing_km": float(settings.get("smoothing_km",
-                                                   DEFAULT_OPTIONS["smoothing_km"])),
-                "mmax_shallow": float(settings.get("mmax_shallow_background",
-                                                   DEFAULT_OPTIONS["mmax_shallow"])),
-                "mmax_slab": float(settings.get("mmax_intraslab_background",
-                                                DEFAULT_OPTIONS["mmax_slab"])),
-                "include_unreviewed": bool(settings.get("include_unreviewed", False))}
+        found = {"buffer_km": self.manifest.get("buffer_km"),
+                 "min_mw": settings.get("min_mw_rates"),
+                 "smoothing_km": settings.get("smoothing_km"),
+                 "mmax_shallow": settings.get("mmax_shallow_background"),
+                 "mmax_slab": settings.get("mmax_intraslab_background"),
+                 "include_unreviewed": settings.get("include_unreviewed")}
+        options = {key: value for key, value in found.items() if value is not None}
+        # Models built before the year limits existed used every year.
+        options["start_year"] = settings.get("start_year_limit")
+        options["end_year"] = settings.get("end_year_limit")
+        return normalize_options(options)
 
     @property
     def tectonic_regions(self) -> list[str]:
@@ -94,13 +108,16 @@ def load_source_model(name: str, root: Path = SOURCE_MODELS_DIR) -> SourceModel 
 
 
 def build_command(name: str, bounds: tuple, options: dict, python: Path) -> list[str]:
-    opts = {**DEFAULT_OPTIONS, **options}
+    opts = normalize_options(options)
     command = [str(python), str(BUILD_SCRIPT), "--name", name,
                "--bounds", *(f"{v:g}" for v in bounds),
                "--buffer-km", f"{opts['buffer_km']:g}", "--min-mw", f"{opts['min_mw']:g}",
                "--smoothing-km", f"{opts['smoothing_km']:g}",
                "--mmax-shallow", f"{opts['mmax_shallow']:g}",
                "--mmax-slab", f"{opts['mmax_slab']:g}"]
+    for key, flag in (("start_year", "--start-year"), ("end_year", "--end-year")):
+        if opts[key] is not None:
+            command += [flag, str(opts[key])]
     if opts["include_unreviewed"]:
         command.append("--include-unreviewed")
     return command

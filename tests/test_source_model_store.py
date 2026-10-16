@@ -47,6 +47,30 @@ def test_build_command_passes_every_option():
     assert command[command.index("--min-mw") + 1] == "4.8"
     assert command[command.index("--buffer-km") + 1] == "300"
     assert command[-1] == "--include-unreviewed"
+    assert "--start-year" not in command and "--end-year" not in command
+
+
+def test_build_command_passes_the_year_limits():
+    command = sms.build_command("m", (120.0, -9.0, 121.0, -8.0),
+                                {"start_year": 1964, "end_year": 2020.0}, Path("py"))
+    assert command[command.index("--start-year") + 1] == "1964"
+    assert command[command.index("--end-year") + 1] == "2020"
+
+
+def test_options_compare_equal_to_the_saved_choice(tmp_path):
+    path = make_model(tmp_path)
+    model = sms.load_source_model("p_sumber", tmp_path)
+    # Models built before the year limits existed used every year.
+    assert model.options["start_year"] is None and model.options["end_year"] is None
+    chosen = {"buffer_km": 250, "min_mw": 4.8, "smoothing_km": 40, "mmax_shallow": 6.5,
+              "mmax_slab": 7.8, "include_unreviewed": 0, "start_year": None, "end_year": None}
+    assert model.options == sms.normalize_options(chosen)
+    manifest = json.loads((path / "manifest.json").read_text(encoding="utf-8"))
+    manifest["settings"].update(start_year_limit=1964, end_year_limit=2020)
+    (path / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+    model = sms.load_source_model("p_sumber", tmp_path)
+    assert model.options == sms.normalize_options({**chosen, "start_year": 1964,
+                                                   "end_year": 2020})
 
 
 def test_load_source_model_reads_options_and_tectonic_regions(tmp_path):
