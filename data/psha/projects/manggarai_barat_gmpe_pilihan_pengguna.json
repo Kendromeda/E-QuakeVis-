@@ -2,88 +2,51 @@
   "id": "manggarai_barat_gmpe_pilihan_pengguna",
   "name": "Manggarai Barat – GMPE pilihan pengguna",
   "created_utc": "2026-10-10T06:10:39+00:00",
-  "updated_utc": "2026-10-10T06:10:40+00:00",
+  "updated_utc": "2026-10-12T17:36:59+00:00",
   "region": {
     "provinces": [
       "Nusa Tenggara Timur"
     ],
     "kabupaten": [
-      "Manggarai Barat"
+      "Alor"
     ],
     "spacing": 0.05,
     "vs30": 760.0
   },
   "source_model": {
-    "kind": "gem",
+    "kind": "own",
     "version": "v2024.0.0",
+    "name": "manggarai_barat_gmpe_pilihan_pengguna_sumber",
+    "path": "data/psha/source_models/manggarai_barat_gmpe_pilihan_pengguna_sumber",
+    "bounds": [
+      123.925,
+      -8.525,
+      125.125,
+      -8.125
+    ],
+    "options": {
+      "buffer_km": 300.0,
+      "min_mw": 4.5,
+      "smoothing_km": 50.0,
+      "mmax_shallow": 6.5,
+      "mmax_slab": 7.8,
+      "include_unreviewed": false
+    },
     "trts": [
       "Active Shallow Crust",
       "Subduction Interface",
       "Subduction Intraslab"
     ]
   },
-  "gmpe_logic_tree": {
-    "Active Shallow Crust": [
-      {
-        "gmpe": "BooreEtAl2014",
-        "weight": 0.34
-      },
-      {
-        "gmpe": "CampbellBozorgnia2014",
-        "weight": 0.33
-      },
-      {
-        "gmpe": "ChiouYoungs2014",
-        "weight": 0.33
-      }
-    ],
-    "Subduction Interface": [
-      {
-        "gmpe": "AbrahamsonGulerce2020SInter",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "ParkerEtAl2020SInter",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "KuehnEtAl2020SInter",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "ZhaoEtAl2006SInter",
-        "weight": 0.25
-      }
-    ],
-    "Subduction Intraslab": [
-      {
-        "gmpe": "AbrahamsonGulerce2020SSlab",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "ParkerEtAl2020SSlab",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "KuehnEtAl2020SSlab",
-        "weight": 0.25
-      },
-      {
-        "gmpe": "ZhaoEtAl2006SSlab",
-        "weight": 0.25
-      }
-    ]
-  },
+  "gmpe_logic_tree": {},
   "notes": {
     "region": "Uji wilayah kecil pilihan pengguna: Kabupaten Manggarai Barat (Labuan Bajo), grid 0,05° (±5,5 km).",
     "source": "Tahap A: model sumber GEM IDN v2024 (PuSGeN 2024), sesuai keputusan bertahap pengguna.",
     "gmpe": "Sama dengan proyek NTT: Dipilih pengguna setelah melihat trellis skenario NTT: kerak dangkal NGA-West2 tiga (BSSA14, CB14, CY14); megathrust dan intraslab NGA-Sub versi global + Zhao 2006 (tanpa penyesuaian regional Cascadia, yang ~3x lebih rendah untuk AG20); bobot sama rata."
   },
   "confirmed": {
-    "region": "2026-10-10T06:10:39+00:00",
-    "source": "2026-10-10T06:10:39+00:00",
-    "gmpe": "2026-10-10T06:10:39+00:00",
-    "review": "2026-10-10T06:10:40+00:00"
+    "region": "2026-10-11T13:24:41+00:00",
+    "source": "2026-10-12T17:36:59+00:00"
   },
-  "run_id": "manggarai_barat_gmpe_pilihan_pengguna_run1"
+  "run_id": null
 }

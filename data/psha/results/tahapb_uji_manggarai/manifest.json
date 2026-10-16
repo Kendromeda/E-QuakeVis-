@@ -1,0 +1,71 @@
+{
+  "run_id": "tahapb_uji_manggarai",
+  "created_utc": "2026-10-12T15:59:18+00:00",
+  "openquake_version": "3.26.2",
+  "model": {
+    "name": "GEM OpenQuake input model for Indonesia (IDN)",
+    "model_version": "v2024.0.0",
+    "authors": "Team for Updating Seismic Hazard Maps of Indonesia (PuSGeN, Kementerian Pekerjaan Umum) and GEM Foundation",
+    "license": "CC BY-NC-SA 4.0",
+    "source": "https://cloud.openquake.org/s/wCBESckQYgWgLqx",
+    "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf"
+  },
+  "region": {
+    "provinces": "all",
+    "spacing_degrees": 0.1,
+    "bounds": [
+      120.2,
+      -8.9,
+      120.6,
+      -8.3
+    ]
+  },
+  "source_model": {
+    "name": "ntt_uji",
+    "path": "data/psha/source_models/ntt_uji",
+    "created_utc": "2026-10-12T15:52:43+00:00",
+    "description": "Tahap B: gempa latar dari katalog sendiri; sesar dan megathrust PuSGeN 2024 via GEM IDN v2024"
+  },
+  "num_sites": 30,
+  "approximations": {
+    "ps_grid_spacing_km": 0.0,
+    "pointsource_distance_km": 200,
+    "maximum_distance_km": {
+      "Subduction Interface": 1000.0,
+      "default": 300.0
+    }
+  },
+  "site_condition": {
+    "vs30_m_s": 760.0,
+    "vs30_type": "measured",
+    "z1pt0_m": null,
+    "z2pt5_km": null
+  },
+  "investigation_time_years": 50.0,
+  "poes": [
+    0.1,
+    0.02
+  ],
+  "return_periods_years": [
+    475,
+    2475
+  ],
+  "imts": [
+    "PGA",
+    "SA(0.2)",
+    "SA(1.0)"
+  ],
+  "gmpe_logic_tree": {
+    "source": "GEM IDN v2024.0.0",
+    "branches": null
+  },
+  "statistic": "mean over the full source and GMPE logic tree",
+  "units": "g",
+  "runtime_seconds": 223,
+  "outputs": {
+    "hazard_map.csv": "89deeb171ec1fb8d369bb94b0bdf05efebb87697fa6e0b8066f72c676f93f83a",
+    "hazard_curves-PGA.csv": "3358973ffc6059e02a7ff5f032fd00c87119508797ad4feebdad0840b7fadac6",
+    "hazard_curves-SA(0.2).csv": "f953346abcebc6cc3eb5298a855cd18ad24b987acf61f90aefe2cc056a6c5163",
+    "hazard_curves-SA(1.0).csv": "ec8d955c4f3159302ca05e5a03251ed3980783d41e2263235b8f09206f69d2fb"
+  }
+}

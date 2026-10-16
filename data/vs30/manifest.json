@@ -1,0 +1,25 @@
+{
+  "created_utc": "2026-10-13T04:38:17+00:00",
+  "source_url": "https://apps.usgs.gov/shakemap_geodata/vs30/global_vs30.grd",
+  "source_sha256": "b07944c5be332c5a261777d23b3390fe8d5638f25b388b82f5dc1e98c6356011",
+  "citation": "Heath, D. C., Wald, D. J., Worden, C. B., Thompson, E. M., & Smoczyk, G. M. (2020). A global hybrid VS30 map with a topographic slope-based default and regional map insets. Earthquake Spectra, 36(3), 1570-1584.",
+  "method": "USGS global hybrid Vs30: topographic-slope proxy with regional insets",
+  "resolution_arcsec": 30.0,
+  "region": {
+    "west": 91.0,
+    "east": 145.0,
+    "south": -15.0,
+    "north": 10.0
+  },
+  "shape": [
+    3001,
+    6481
+  ],
+  "cells_missing": 0,
+  "vs30_range_m_s": [
+    180,
+    900
+  ],
+  "note": "Water cells are 600 m/s in the USGS grid; PSHA sites are on land.",
+  "output": "data/vs30/usgs_vs30_indonesia.npz"
+}
