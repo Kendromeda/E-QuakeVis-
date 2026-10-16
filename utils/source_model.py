@@ -86,6 +86,26 @@ def select_catalog(
     return selected.reset_index(drop=True), stats
 
 
+def limit_years(
+    mains: pd.DataFrame,
+    start_year: int | None = None,
+    end_year: int | None = None,
+) -> tuple[pd.DataFrame, dict]:
+    """Mainshocks with ``start_year <= year <= end_year`` (None: no limit); returns counts.
+
+    Applied after declustering, so aftershocks of an earthquake just before
+    ``start_year`` are still recognised as aftershocks.
+    """
+    years = mains["year"]
+    before = years < start_year if start_year is not None else pd.Series(False, mains.index)
+    after = years > end_year if end_year is not None else pd.Series(False, mains.index)
+    kept = mains.loc[~before & ~after].reset_index(drop=True)
+    return kept, {"start_year": start_year, "end_year": end_year,
+                  "mainshocks_in": int(len(mains)),
+                  "removed_before_start": int(before.sum()),
+                  "removed_after_end": int(after.sum()), "mainshocks_used": int(len(kept))}
+
+
 def layer_names(edges=DEFAULT_DEPTH_EDGES) -> list[str]:
     return [f"{edges[i]:g}-{edges[i + 1]:g} km" for i in range(len(edges) - 1)]
 

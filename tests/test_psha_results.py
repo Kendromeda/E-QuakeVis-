@@ -128,11 +128,48 @@ def test_grid_rejects_sites_off_the_regular_grid():
 
 def test_classes_follow_breaks_and_mark_empty_cells():
     breaks = HAZARD_BREAKS_G["PGA"]
-    classes = hazard_classes(np.array([0.0, 0.049, 0.05, 0.99, 1.5, np.nan]), breaks)
-    assert classes.tolist() == [0, 0, 1, 10, 11, -1]
+    classes = hazard_classes(np.array([0.0, 0.099, 0.1, 0.99, 1.5, np.nan]), breaks)
+    assert classes.tolist() == [0, 0, 1, 8, 10, -1]
     labels = hazard_legend_labels(breaks)
     assert len(labels) == len(breaks)
-    assert labels[1] == "0,05 – 0,1" and labels[-1] == "≥ 1"
+    assert labels[1] == "0,1 – 0,2" and labels[-1] == "≥ 1,3"
+
+
+def test_every_imt_has_one_colour_per_class():
+    from utils.psha_results import HAZARD_COLORS
+
+    for breaks in HAZARD_BREAKS_G.values():
+        assert len(breaks) == len(HAZARD_COLORS)
+
+
+def test_smooth_grid_interpolates_between_sites_and_clips_to_region():
+    from shapely.geometry import box
+
+    from utils.psha_results import smooth_hazard_grid
+
+    # Two sites 0.1 deg apart on one row: 0.2 g and 0.4 g.
+    values = np.array([[0.2, 0.4]])
+    bounds = (106.75, -6.25, 106.95, -6.15)
+    fine, out_bounds = smooth_hazard_grid(values, bounds, 0.1, max_cells=20)
+    assert out_bounds == bounds
+    row = fine[fine.shape[0] // 2]
+    assert row[0] == pytest.approx(0.2) and row[-1] == pytest.approx(0.4)
+    assert np.all(np.diff(row) >= -1e-12)  # rises smoothly from west to east
+    assert 0.25 < np.nanmedian(row) < 0.35
+    # Only the western half lies in the region polygon.
+    clipped, _ = smooth_hazard_grid(values, bounds, 0.1, [box(106.75, -6.25, 106.85, -6.15)],
+                                    max_cells=20)
+    assert np.isfinite(clipped[:, 0]).all() and np.isnan(clipped[:, -1]).all()
+
+
+def test_smooth_grid_fills_small_gaps_but_not_far_from_sites():
+    from utils.psha_results import smooth_hazard_grid
+
+    values = np.full((5, 5), np.nan)
+    values[0, 0] = 0.3
+    fine, _ = smooth_hazard_grid(values, (100.0, -0.5, 100.5, 0.0), 0.1, max_cells=50)
+    assert np.isfinite(fine[0, 0]) and fine[0, 0] == pytest.approx(0.3)
+    assert np.isnan(fine[-1, -1])  # four cells away from the only site
 
 
 def test_nearest_site_returns_index_and_distance():

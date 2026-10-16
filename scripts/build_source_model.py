@@ -15,7 +15,8 @@ describes every file):
 1. Region (``01_region.csv``)
 2. Catalogue selection (``02_catalog_selected.csv``); events newer than the ISC
    review lag are left out unless ``--include-unreviewed``
-3. Gardner-Knopoff declustering (``03_*``)
+3. Gardner-Knopoff declustering (``03_*``) on all years; ``--start-year`` and
+   ``--end-year`` then limit the mainshocks used from step 4 on
 4. Stepp completeness on the declustered catalogue (``04_*``)
 5. Weichert a and b per depth layer (``05_*``)
 6. Smoothed background seismicity per layer (``06_*``, Frankel 1995)
@@ -57,6 +58,7 @@ from utils.source_model import (  # noqa: E402
     depth_layer_labels,
     expand_bounds,
     fmd_rows,
+    limit_years,
     region_warnings,
     select_catalog,
     stepp_rows,
@@ -75,7 +77,8 @@ FILES = {
     "03_declustering_summary.csv": "Jumlah gempa dipertahankan dan dibuang per rentang Mw",
     "03_declustering_clusters.csv": "Satu baris per klaster: gempa utama, jumlah susulan, "
                                     "rentang waktu",
-    "03_catalog_mw_declustered.csv": "Katalog akhir: hanya gempa utama/independen",
+    "03_catalog_mw_declustered.csv": "Katalog akhir: hanya gempa utama/independen di "
+                                     "rentang tahun yang dipilih",
     "04_completeness.csv": "Tahun mulai lengkap untuk setiap rentang Mw (Stepp, 1972)",
     "04_stepp_diagram.csv": "Data diagram Stepp: sigma_lambda per jendela waktu",
     "05_fmd.csv": "Distribusi frekuensi-magnitudo per lapisan: laju teramati dan laju G-R",
@@ -165,6 +168,10 @@ def main() -> int:
                         help="smallest Mw used when identifying clusters")
     parser.add_argument("--include-unreviewed", action="store_true",
                         help="keep events newer than the ISC review lag")
+    parser.add_argument("--start-year", type=int,
+                        help="first year of mainshocks used for rates (default: all)")
+    parser.add_argument("--end-year", type=int,
+                        help="last year of mainshocks used for rates (default: all)")
     parser.add_argument("--depth-edges", nargs="+", type=float, default=list(DEFAULT_DEPTH_EDGES))
     parser.add_argument("--fs-time-prop", type=float, default=1.0,
                         help="foreshock window as a fraction of the aftershock window")
@@ -187,6 +194,9 @@ def main() -> int:
     west, south, east, north = args.bounds
     if not (west < east and south < north):
         raise SystemExit("--bounds must be WEST SOUTH EAST NORTH with west < east, south < north")
+    if args.start_year is not None and args.end_year is not None \
+            and args.start_year > args.end_year:
+        raise SystemExit("--start-year must not be after --end-year")
     edges = tuple(args.depth_edges)
 
     cat_path = CATALOG_DIR / "mw_catalog.csv"
@@ -221,20 +231,26 @@ def main() -> int:
         raise SystemExit("No earthquakes in the source region.")
     selected["depth_layer"] = depth_layer_labels(selected["depth_km"], edges)
     selected.to_csv(out / "02_catalog_selected.csv", index=False)
-    end_year = int(selected["year"].max())
 
-    # 3. Declustering
+    # 3. Declustering on every year, then the chosen years
     cluster, flag = decluster(selected, args.fs_time_prop)
     events = declustering_events(selected, cluster, flag)
     events.to_csv(out / "03_declustering_events.csv", index=False)
     declustering_summary(events).to_csv(out / "03_declustering_summary.csv", index=False)
     cluster_table(events).to_csv(out / "03_declustering_clusters.csv", index=False)
     mains = events.loc[events["kept"], list(selected.columns)].reset_index(drop=True)
-    mains.to_csv(out / "03_catalog_mw_declustered.csv", index=False)
     counts["declustering"] = {"events": int(len(events)), "mainshocks": int(len(mains)),
                               "removed": int(len(events) - len(mains)),
                               "clusters": int(events.loc[events["cluster_id"] > 0,
                                                          "cluster_id"].nunique())}
+    mains, counts["period"] = limit_years(mains, args.start_year, args.end_year)
+    if mains.empty:
+        raise SystemExit("No mainshocks between --start-year and --end-year.")
+    mains.to_csv(out / "03_catalog_mw_declustered.csv", index=False)
+    # The period ends with the last catalogue year, or earlier with --end-year.
+    end_year = int(selected["year"].max())
+    if args.end_year is not None:
+        end_year = min(end_year, args.end_year)
 
     # 4. Completeness on the declustered catalogue (all depths)
     model, table = stepp(mains, args.stepp_mag_bin, args.stepp_time_bin)
@@ -399,6 +415,7 @@ def main() -> int:
                     "created_utc": cat_manifest["created_utc"]},
         "settings": {"min_mw_rates": args.min_mw, "decluster_min_mw": args.decluster_min_mw,
                      "include_unreviewed": args.include_unreviewed,
+                     "start_year_limit": args.start_year, "end_year_limit": args.end_year,
                      "declustering": "Gardner & Knopoff (1974), HMTK GardnerKnopoffType1",
                      "fs_time_prop": args.fs_time_prop,
                      "completeness": "Stepp (1972), HMTK Stepp1971, increment_lock",
@@ -457,6 +474,7 @@ def main() -> int:
     for note in notes:
         print("WARNING:", note)
     print(f"Declustering: {counts['declustering']}")
+    print(f"Years: {counts['period']}")
     print(pd.read_csv(out / "04_completeness.csv").to_string(index=False))
     print(summary[["source_id", "tectonic_region", "n_sources", "b_value", "mmin", "mmax",
                    "annual_rate_mw_ge_mmin", "rate_mw_ge_5_per_year",

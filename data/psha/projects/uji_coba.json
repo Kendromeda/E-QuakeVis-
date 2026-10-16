@@ -1,0 +1,28 @@
+{
+  "id": "uji_coba",
+  "name": "uji_coba",
+  "created_utc": "2026-10-12T17:38:09+00:00",
+  "updated_utc": "2026-10-12T17:38:51+00:00",
+  "region": {
+    "provinces": [
+      "Jawa Barat"
+    ],
+    "kabupaten": [
+      "Sukabumi"
+    ],
+    "spacing": 0.1,
+    "vs30": 760.0
+  },
+  "source_model": {
+    "kind": "gem",
+    "version": "v2024.0.0"
+  },
+  "gmpe_logic_tree": {},
+  "notes": {
+    "region": ""
+  },
+  "confirmed": {
+    "region": "2026-10-12T17:38:51+00:00"
+  },
+  "run_id": null
+}

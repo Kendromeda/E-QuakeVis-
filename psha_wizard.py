@@ -464,9 +464,29 @@ def _own_source_step(project: dict[str, Any]) -> None:
     unreviewed = cols[2].checkbox("Sertakan gempa belum direview ISC (±24 bulan terakhir)",
                                   value=bool(options["include_unreviewed"]),
                                   key=f"sm_unrev_{pid}")
+    cols = st.columns(3)
+    limited = cols[0].checkbox(
+        "Batasi rentang tahun katalog",
+        value=options["start_year"] is not None or options["end_year"] is not None,
+        key=f"sm_years_{pid}",
+        help="Deklasterisasi tetap memakai semua tahun; batas ini hanya memilih gempa utama "
+             "untuk kelengkapan dan nilai a-b. Rentang pendek membuat laju gempa besar "
+             "kurang stabil.")
+    this_year = pd.Timestamp.now().year
+    start_year = cols[1].number_input("Tahun mulai", 1900, this_year,
+                                      int(options["start_year"] or 1964), 1,
+                                      key=f"sm_y0_{pid}", disabled=not limited)
+    end_year = cols[2].number_input("Tahun akhir", 1900, this_year,
+                                    int(options["end_year"] or this_year), 1,
+                                    key=f"sm_y1_{pid}", disabled=not limited)
+    if limited and start_year > end_year:
+        st.error("Tahun mulai tidak boleh setelah tahun akhir.")
+        return
     chosen = {"buffer_km": buffer_km, "min_mw": min_mw, "smoothing_km": smoothing,
               "mmax_shallow": mmax_shallow, "mmax_slab": mmax_slab,
-              "include_unreviewed": unreviewed}
+              "include_unreviewed": unreviewed,
+              "start_year": int(start_year) if limited else None,
+              "end_year": int(end_year) if limited else None}
 
     name = sms.model_name(pid)
     model = sms.load_source_model(name)
@@ -489,8 +509,7 @@ def _own_source_step(project: dict[str, Any]) -> None:
     if stale:
         st.warning("Model sumber dibangun untuk kotak lain. Bangun ulang supaya sesuai "
                    "wilayah langkah 1.")
-    elif model.options != {k: (bool(v) if k == "include_unreviewed" else float(v))
-                           for k, v in chosen.items()}:
+    elif model.options != sms.normalize_options(chosen):
         st.warning("Pengaturan di atas berbeda dari model yang sudah dibangun. Tekan "
                    "**Bangun ulang model sumber** untuk memakainya; tabel di bawah masih "
                    "hasil pengaturan lama.")
@@ -521,6 +540,14 @@ def _own_source_report(model: sms.SourceModel) -> None:
     cols[2].metric("Dibuang (susulan/pendahulu)",
                    f"{dec.get('removed', 0):,}".replace(",", "."))
     cols[3].metric("Tahun akhir katalog", manifest.get("end_year", "-"))
+    period = counts.get("period", {})
+    if period.get("start_year") is not None or period.get("end_year") is not None:
+        st.caption(f"Rentang tahun {period.get('start_year') or 'awal'}–"
+                   f"{period.get('end_year') or 'akhir'}: "
+                   f"{period.get('mainshocks_used', 0):,} gempa utama dipakai, "
+                   f"{period.get('removed_before_start', 0):,} sebelum dan "
+                   f"{period.get('removed_after_end', 0):,} sesudah rentang tidak dipakai."
+                   .replace(",", "."))
     try:
         summary = model.table("source_model_summary.csv")
         ab = model.table("05_ab_values.csv")

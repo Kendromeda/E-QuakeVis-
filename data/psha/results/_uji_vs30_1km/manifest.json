@@ -1,0 +1,66 @@
+{
+  "run_id": "_uji_vs30_1km",
+  "created_utc": "2026-10-13T04:57:01+00:00",
+  "openquake_version": "3.26.2",
+  "model": {
+    "name": "GEM OpenQuake input model for Indonesia (IDN)",
+    "model_version": "v2024.0.0",
+    "authors": "Team for Updating Seismic Hazard Maps of Indonesia (PuSGeN, Kementerian Pekerjaan Umum) and GEM Foundation",
+    "license": "CC BY-NC-SA 4.0",
+    "source": "https://cloud.openquake.org/s/wCBESckQYgWgLqx",
+    "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf"
+  },
+  "region": {
+    "provinces": "all",
+    "spacing_degrees": 0.01,
+    "bounds": [
+      120.4,
+      -8.7,
+      120.5,
+      -8.6
+    ]
+  },
+  "num_sites": 121,
+  "approximations": {
+    "ps_grid_spacing_km": 0.0,
+    "pointsource_distance_km": 200,
+    "maximum_distance_km": {
+      "Subduction Interface": 1000.0,
+      "default": 300.0
+    }
+  },
+  "site_condition": {
+    "vs30_m_s": 835.0,
+    "vs30_source": "usgs",
+    "vs30_type": "inferred (topographic-slope proxy)",
+    "vs30_min_m_s": 408.0,
+    "vs30_max_m_s": 900.0,
+    "z1pt0_m": null,
+    "z2pt5_km": null,
+    "citation": "Heath et al. (2020), Earthquake Spectra 36(3)",
+    "note": "vs30_m_s is the median; per-site values are in sites.csv"
+  },
+  "investigation_time_years": 50.0,
+  "poes": [
+    0.1,
+    0.02
+  ],
+  "return_periods_years": [
+    475,
+    2475
+  ],
+  "imts": [
+    "PGA"
+  ],
+  "gmpe_logic_tree": {
+    "source": "GEM IDN v2024.0.0",
+    "branches": null
+  },
+  "statistic": "mean over the full source and GMPE logic tree",
+  "units": "g",
+  "runtime_seconds": 235,
+  "outputs": {
+    "hazard_map.csv": "2788fb98ddf199f5d2f6ab8fa0a001ada2ecf33049bfa39f03232b5ddf2d756b",
+    "hazard_curves-PGA.csv": "c34b6237332c26dd2e99cdc795c3b40d085212d5e1eb1fb1ff08866483cb413a"
+  }
+}

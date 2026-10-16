@@ -454,7 +454,9 @@ def add_hazard_layer(
     west, south, east, north = bounds
     hazard_layer = folium.FeatureGroup(name=HAZARD_LAYER_NAME, show=True)
     folium.raster_layers.ImageOverlay(
-        image=hazard_image_data_url(classes, bounds, colors),
+        # Smoothed grids are already fine; small site grids get enlarged cells.
+        image=hazard_image_data_url(classes, bounds, colors,
+                                    pixels_per_cell=max(1, min(4, 1600 // max(classes.shape)))),
         bounds=[[south, west], [north, east]],
         opacity=1.0,
         interactive=False,

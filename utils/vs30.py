@@ -33,7 +33,7 @@ class Vs30Error(ValueError):
 def load_grid(path: Path = VS30_PATH) -> dict:
     if not path.is_file():
         raise Vs30Error("Grid Vs30 USGS belum disiapkan. Jalankan "
-                        "scripts/prepare_usgs_vs30.py di lingkungan OpenQuake.")
+                        "scripts/setup_psha_data.py --only vs30 di lingkungan OpenQuake.")
     with np.load(path) as data:
         return {"vs30": data["vs30"], "lon0": float(data["lon0"]), "lat0": float(data["lat0"]),
                 "step": float(data["step"])}

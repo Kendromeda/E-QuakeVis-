@@ -151,10 +151,13 @@ from utils.psha_results import (
     HAZARD_BREAKS_G,
     HAZARD_COLORS,
     IMT_LABELS,
+    SMOOTH_MAX_CELLS,
+    HazardColumn,
     PSHAResultError,
     PSHARun,
     hazard_classes,
     hazard_grid,
+    smooth_hazard_grid,
     hazard_legend_labels,
     list_psha_runs,
     load_hazard_curves,
@@ -163,7 +166,12 @@ from utils.psha_results import (
     vs30_label,
     nearest_site,
 )
-from utils.psha_sites import build_sites, load_province_features, province_names
+from utils.psha_sites import (
+    build_sites,
+    load_province_features,
+    province_names,
+    region_polygons,
+)
 from utils.stats import calculate_summary_stats
 from utils.trench_data import TrenchDataError, load_trench_geojson
 from utils.volcano_data import (
@@ -2372,27 +2380,9 @@ def render_publication_builder(
             except (PSHAResultError, OSError) as exc:
                 st.error(f"Layer PSHA tidak dapat dimuat: {exc}")
             else:
-                hazard_manifest = publication_hazard_run.manifest
-                publication_hazard_layer = PublicationHazardLayer(
-                    classes=hazard_classes_grid,
-                    bounds=hazard_bounds,
-                    colors=HAZARD_COLORS,
-                    labels=tuple(
-                        hazard_legend_labels(HAZARD_BREAKS_G[publication_hazard_column.imt])
-                    ),
-                    heading=(
-                        f"{publication_hazard_column.imt} "
-                        f"{publication_hazard_column.return_period_years:,} th (g)"
-                    ).replace(",", "."),
-                    source=(
-                        "Bahaya gempa: PSHA OpenQuake "
-                        f"{hazard_manifest['openquake_version']}, model "
-                        f"{model_label(hazard_manifest)} "
-                        f"({hazard_manifest['model']['license']}); rerata logic tree, "
-                        f"{vs30_label(hazard_manifest['site_condition'])}, "
-                        f"grid {publication_hazard_run.spacing:g}°"
-                    ),
-                )
+                publication_hazard_layer = psha_publication_layer(
+                    publication_hazard_run, publication_hazard_column,
+                    hazard_classes_grid, hazard_bounds)
                 publication_hazard_key = (
                     f"{publication_hazard_run.run_id}:{publication_hazard_column.column}:"
                     f"{(publication_hazard_run.path / 'manifest.json').stat().st_mtime_ns}"
@@ -3154,13 +3144,153 @@ def build_psha_raster(
     column: str,
     imt: str,
     spacing: float,
+    max_cells: int = SMOOTH_MAX_CELLS,
 ) -> tuple[np.ndarray, tuple[float, float, float, float]]:
-    """Classified hazard grid for one IMT/return period (cached per result file)."""
+    """Smoothed, classified hazard grid for one IMT/return period (cached per result file).
+
+    Site values are interpolated onto a fine grid clipped to the run's region,
+    so maps show smooth class areas instead of one square per site.
+    """
     del manifest_mtime_ns  # Cache key only.
     run = next(run for run in list_psha_runs(Path(run_path).parent)
                if str(run.path) == run_path)
     values, bounds = hazard_grid(load_hazard_map(run), column, spacing)
-    return hazard_classes(values, HAZARD_BREAKS_G[imt]), bounds
+    fine, bounds = smooth_hazard_grid(values, bounds, spacing,
+                                      region_polygons(run.manifest["region"]), max_cells)
+    return hazard_classes(fine, HAZARD_BREAKS_G[imt]), bounds
+
+
+def psha_publication_layer(
+    run: PSHARun,
+    column: HazardColumn,
+    classes: np.ndarray,
+    bounds: tuple[float, float, float, float],
+) -> PublicationHazardLayer:
+    """The hazard raster of one run/column as a layer of the publication sheet."""
+    manifest = run.manifest
+    return PublicationHazardLayer(
+        classes=classes,
+        bounds=bounds,
+        colors=HAZARD_COLORS,
+        labels=tuple(hazard_legend_labels(HAZARD_BREAKS_G[column.imt])),
+        heading=f"{column.imt} {column.return_period_years:,} th (g)".replace(",", "."),
+        source=(
+            f"Bahaya gempa: PSHA OpenQuake {manifest['openquake_version']}, model "
+            f"{model_label(manifest)} ({manifest['model']['license']}); rerata logic tree, "
+            f"{vs30_label(manifest['site_condition'])}, grid {run.spacing:g}°"
+        ),
+    )
+
+
+def psha_region_label(manifest: dict[str, Any]) -> str:
+    region = manifest["region"]
+    if region.get("kabupaten"):
+        return "Kabupaten/Kota " + ", ".join(region["kabupaten"])
+    provinces = region.get("provinces")
+    if isinstance(provinces, list) and provinces:
+        return "Provinsi " + ", ".join(provinces)
+    if region.get("bounds"):
+        return format_bounds(tuple(region["bounds"]))
+    return "Indonesia"
+
+
+def render_psha_publication(
+    run: PSHARun,
+    column: HazardColumn,
+    fault_geojson: dict[str, Any],
+    trench_geojson: dict[str, Any],
+    province_geojson: dict[str, Any],
+) -> None:
+    """Publication sheet (layout, legend, scale, inset, logos) of the hazard map shown."""
+    imt_text = {"PGA": "PGA", "SA(0.2)": "SA 0,2 Detik", "SA(1.0)": "SA 1,0 Detik"}.get(
+        column.imt, column.imt)
+    region_text = psha_region_label(run.manifest)
+    default_title = (f"Peta Bahaya Gempa {imt_text} Periode Ulang "
+                     f"{column.return_period_years:,} Tahun".replace(",", ".")
+                     + f" {region_text}")
+    st.caption(
+        "Membuat lembar peta siap cetak dari peta bahaya di atas, memakai template layout yang "
+        "sama dengan tab Peta Publikasi: judul, legenda kelas bahaya, sesar, skala, panah "
+        "utara, peta lokasi, logo, dan sumber data.")
+    with st.form(f"psha_publication_form_{run.run_id}_{column.column}"):
+        title = st.text_input("Judul peta", value=default_title)
+        institution = st.text_input("Nama instansi", value="")
+        logo_file = st.file_uploader("Logo instansi (opsional)", type=["png", "jpg", "jpeg"])
+        cols = st.columns(3)
+        template = cols[0].selectbox("Template layout", list(PUBLICATION_TEMPLATES))
+        page_size = cols[1].selectbox("Ukuran kertas", list(PAGE_SIZES))
+        resolution = cols[2].selectbox("Resolusi", list(PUBLICATION_DPI_OPTIONS))
+        cols = st.columns(3)
+        basemap = cols[0].selectbox("Basemap", ["Tanpa basemap", *BASEMAP_OPTIONS],
+                                    index=1 + list(BASEMAP_OPTIONS).index(BASEMAP_RELIEF))
+        padding = cols[1].slider("Ruang tepi peta (%)", 0, 30, 8)
+        cols[2].write("")
+        cols = st.columns(5)
+        show_faults = cols[0].checkbox("Sesar", value=True)
+        show_trenches = cols[1].checkbox("Palung", value=True)
+        show_provinces = cols[2].checkbox("Batas provinsi", value=True)
+        show_labels = cols[3].checkbox("Label wilayah", value=True)
+        show_inset = cols[4].checkbox("Peta lokasi", value=True)
+        submitted = st.form_submit_button("Buat peta publikasi", type="primary")
+
+    result_key = "psha_publication_result"
+    signature = (run.run_id, column.column,
+                 (run.path / "manifest.json").stat().st_mtime_ns)
+    if submitted:
+        output_dpi = PUBLICATION_DPI_OPTIONS[resolution]
+        try:
+            classes, bounds = build_psha_raster(
+                str(run.path), signature[2], column.column, column.imt, run.spacing,
+                max_cells=3600)
+        except (PSHAResultError, OSError) as exc:
+            st.error(str(exc))
+            return
+        layer = psha_publication_layer(run, column, classes, bounds)
+        empty = pd.DataFrame()
+        common = dict(
+            hazard_layer=layer, trench_geojson=trench_geojson, show_earthquakes=False,
+            padding_percent=padding, page_size=page_size, output_dpi=output_dpi,
+            show_basemap=basemap != "Tanpa basemap",
+            basemap_name=basemap if basemap != "Tanpa basemap" else BASEMAP_RELIEF,
+            show_faults=show_faults, show_trenches=show_trenches,
+            show_provinces=show_provinces, show_region_labels=show_labels,
+            template_name=template, selection_bounds=bounds,
+        )
+        with st.status("Membuat peta publikasi...", expanded=True) as status:
+            try:
+                status.write("Menggambar peta (basemap diunduh bila dipilih)...")
+                snapshot = capture_filtered_map(
+                    empty, fault_geojson, province_geojson,
+                    output_size=get_publication_map_size(page_size, output_dpi, template),
+                    marker_scale_percent=100, **common)
+                status.write("Menyusun layout...")
+                png_bytes, pdf_bytes = render_publication_map(
+                    empty, fault_geojson, province_geojson,
+                    title=title, institution_name=institution,
+                    logo_bytes=logo_file.getvalue() if logo_file else None,
+                    show_inset=show_inset, map_snapshot_bytes=snapshot,
+                    # The RTRW template prints this under its title block.
+                    map_type_label=f"Peta Bahaya Gempa {region_text}",
+                    source_text="", **common)
+            except PublicationMapError as exc:
+                status.update(label="Peta publikasi gagal dibuat.", state="error")
+                st.error(str(exc))
+                return
+            status.update(label="Peta publikasi selesai.", state="complete", expanded=False)
+        st.session_state[result_key] = {"signature": signature, "png": png_bytes,
+                                        "pdf": pdf_bytes, "title": title}
+
+    result = st.session_state.get(result_key)
+    if result is None or result["signature"] != signature:
+        return
+    st.image(result["png"], width="stretch")
+    stem = publication_filename_stem(result["title"])
+    left, right = st.columns(2)
+    left.download_button("Unduh PNG", data=result["png"], file_name=f"{stem}.png",
+                         mime="image/png", width="stretch", key="psha_pub_png")
+    if result["pdf"]:
+        right.download_button("Unduh PDF", data=result["pdf"], file_name=f"{stem}.pdf",
+                              mime="application/pdf", width="stretch", key="psha_pub_pdf")
 
 
 def format_g(value: float) -> str:
@@ -3586,6 +3716,8 @@ def render_psha_hazard(
         mime="text/csv",
         key="psha_grid_download",
     )
+    with st.expander("Buat peta publikasi (layout siap cetak)"):
+        render_psha_publication(run, column, fault_geojson, trench_geojson, province_geojson)
     render_psha_validation(run)
     st.caption(
         "Peta bahaya probabilistik (uniform hazard) pada batuan referensi, rerata "

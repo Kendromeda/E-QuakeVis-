@@ -2,8 +2,14 @@
   "source": "http://www.isc.ac.uk/fdsnws/event/1/query",
   "citation": "International Seismological Centre (2026), On-line Bulletin, https://doi.org/10.31905/D808B830",
   "license": "ISC Bulletin: free to use with citation",
-  "retrieved_utc": "2026-10-10T01:01:52+00:00",
+  "retrieved_utc": "2026-10-12T18:09:47+00:00",
   "region": {
+    "minlatitude": -15.0,
+    "maxlatitude": 10.0,
+    "minlongitude": 91.0,
+    "maxlongitude": 145.0
+  },
+  "core_region": {
     "minlatitude": -11.5,
     "maxlatitude": 6.5,
     "minlongitude": 94.5,
@@ -13,26 +19,96 @@
     {
       "name": "recent_m4",
       "start": "2008-11-01",
-      "end": "2026-10-10",
+      "end": "2026-10-12",
       "minmagnitude": 4.0,
-      "maxmagnitude": null
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": -11.5,
+        "maxlatitude": 6.5,
+        "minlongitude": 94.5,
+        "maxlongitude": 141.5
+      }
     },
     {
       "name": "history",
       "start": "1904-01-01",
       "end": "2008-11-01",
       "minmagnitude": null,
-      "maxmagnitude": null
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": -11.5,
+        "maxlatitude": 6.5,
+        "minlongitude": 94.5,
+        "maxlongitude": 141.5
+      }
     },
     {
       "name": "recent_small",
       "start": "2008-11-01",
-      "end": "2026-10-10",
+      "end": "2026-10-12",
       "minmagnitude": null,
-      "maxmagnitude": 3.99
+      "maxmagnitude": 3.99,
+      "region": {
+        "minlatitude": -11.5,
+        "maxlatitude": 6.5,
+        "minlongitude": 94.5,
+        "maxlongitude": 141.5
+      }
+    },
+    {
+      "name": "margin_south",
+      "start": "1904-01-01",
+      "end": "2026-10-12",
+      "minmagnitude": 4.0,
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": -15.0,
+        "maxlatitude": -11.5,
+        "minlongitude": 91.0,
+        "maxlongitude": 145.0
+      }
+    },
+    {
+      "name": "margin_north",
+      "start": "1904-01-01",
+      "end": "2026-10-12",
+      "minmagnitude": 4.0,
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": 6.5,
+        "maxlatitude": 10.0,
+        "minlongitude": 91.0,
+        "maxlongitude": 145.0
+      }
+    },
+    {
+      "name": "margin_west",
+      "start": "1904-01-01",
+      "end": "2026-10-12",
+      "minmagnitude": 4.0,
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": -11.5,
+        "maxlatitude": 6.5,
+        "minlongitude": 91.0,
+        "maxlongitude": 94.5
+      }
+    },
+    {
+      "name": "margin_east",
+      "start": "1904-01-01",
+      "end": "2026-10-12",
+      "minmagnitude": 4.0,
+      "maxmagnitude": null,
+      "region": {
+        "minlatitude": -11.5,
+        "maxlatitude": 6.5,
+        "minlongitude": 141.5,
+        "maxlongitude": 145.0
+      }
     }
   ],
   "note": "Magnitude limits are applied by the ISC service; every magnitude reported for a selected event is kept and events are de-duplicated by ISC event id. Events after the ISC review cut-off are unreviewed.",
-  "num_events": 280614,
-  "num_magnitudes": 1206980
+  "num_events": 310318,
+  "num_magnitudes": 1394213
 }

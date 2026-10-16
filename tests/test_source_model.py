@@ -14,6 +14,7 @@ from utils.source_model import (
     expand_bounds,
     fmd_rows,
     gk_windows,
+    limit_years,
     region_warnings,
     select_catalog,
     smoothed_grid,
@@ -48,6 +49,18 @@ def test_select_catalog_filters_region_magnitude_and_unreviewed():
                      "selected": 1}
     both, _ = select_catalog(catalog, (119.0, -10.0, 121.0, -8.0), 4.0, include_unreviewed=True)
     assert list(both["mw"]) == [5.0, 5.5]
+
+
+def test_limit_years_keeps_the_inclusive_range_and_counts_the_rest():
+    mains = pd.DataFrame({"year": [1950, 1964, 1990, 2010, 2020], "mw": [7.0, 5.0, 5.5, 6.0, 4.8]})
+    kept, stats = limit_years(mains, 1964, 2010)
+    assert list(kept["year"]) == [1964, 1990, 2010]
+    assert stats == {"start_year": 1964, "end_year": 2010, "mainshocks_in": 5,
+                     "removed_before_start": 1, "removed_after_end": 1, "mainshocks_used": 3}
+    only_start, _ = limit_years(mains, start_year=2000)
+    assert list(only_start["year"]) == [2010, 2020]
+    everything, stats = limit_years(mains)
+    assert len(everything) == 5 and stats["mainshocks_used"] == 5
 
 
 def test_depth_layer_labels_put_missing_depth_in_the_shallowest_layer():

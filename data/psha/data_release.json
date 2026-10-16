@@ -1,0 +1,25 @@
+{
+  "description": "Ready-made PSHA data on GitHub Releases, fetched by scripts/setup_psha_data.py",
+  "repository": "Kendromeda/E-QuakeVis-",
+  "tag": "psha-data-2026-10-13",
+  "assets": {
+    "catalog": {
+      "name": "psha_mw_catalog.zip",
+      "sha256": "fec49669ac5df21b1081b810f8ebc37d778d4b7bd9190d26fbf9faaf99328f55",
+      "extract_to": "data/psha/catalog",
+      "check": "data/psha/catalog/mw_catalog.csv"
+    },
+    "vs30": {
+      "name": "usgs_vs30_indonesia.npz",
+      "sha256": "db163d2ca16f9819f4e9626e5992e49d0ae4394b53ee8a3d27dbbe3c9a749b59",
+      "save_as": "data/vs30/usgs_vs30_indonesia.npz",
+      "check": "data/vs30/usgs_vs30_indonesia.npz"
+    },
+    "vs30_manifest": {
+      "name": "usgs_vs30_manifest.json",
+      "sha256": "9d6660614c5cb9eab6b47c0ac0733a23b66f0051ee4d67a605436e15a7456afe",
+      "save_as": "data/vs30/manifest.json",
+      "check": "data/vs30/manifest.json"
+    }
+  }
+}

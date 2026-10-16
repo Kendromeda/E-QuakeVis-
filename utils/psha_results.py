@@ -27,15 +27,22 @@ IMT_LABELS = {
     "SA(1.0)": "SA 1,0 detik (spektral periode 1 detik)",
 }
 # Fixed class limits (g) so maps of different runs and regions are comparable.
+# PGA and SA(0.2) follow the classes of common published PSHA maps (green to
+# red), extended upward for the higher Indonesian values.
 HAZARD_BREAKS_G = {
-    "PGA": (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0),
-    "SA(0.2)": (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0, 1.25, 1.5, 2.0),
-    "SA(1.0)": (0.0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0),
+    "PGA": (0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9, 1.1, 1.3),
+    "SA(0.2)": (0.0, 0.2, 0.3, 0.4, 0.6, 0.8, 1.2, 1.6, 2.0, 2.5, 3.0),
+    "SA(1.0)": (0.0, 0.05, 0.1, 0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8, 1.0),
 }
+# Dark green (low) through pale yellow and orange to dark red (high).
 HAZARD_COLORS = (
-    "#fff7bc", "#fee391", "#fec44f", "#fe9929", "#ec7014", "#cc4c02",
-    "#d7301f", "#b30000", "#7f0000", "#7a0177", "#49006a", "#25003a",
+    "#238443", "#41ab5d", "#78c679", "#addd8e", "#d9f0a3", "#ffffbf",
+    "#fed98e", "#fdae61", "#f46d43", "#d73027", "#a50026",
 )
+# Longest side (cells) of the smoothed hazard grid drawn on maps.
+SMOOTH_MAX_CELLS = 1800
+# Smoothed cells farther than this many site spacings from any site stay empty.
+SMOOTH_REACH_CELLS = 1
 
 
 # Scientific basis of each GEM IDN model version, for captions and map credits.
@@ -225,6 +232,92 @@ def hazard_grid(
     bounds = (cols.min() * spacing - half, rows.min() * spacing - half,
               cols.max() * spacing + half, rows.max() * spacing + half)
     return values, bounds
+
+
+def _fill_from_neighbours(values: np.ndarray) -> np.ndarray:
+    """NaN cells take the mean of their valid neighbours, growing outward."""
+    filled = values.astype(float).copy()
+    for _ in range(max(filled.shape)):
+        missing = ~np.isfinite(filled)
+        if not missing.any() or missing.all():
+            break
+        padded = np.pad(filled, 1, constant_values=np.nan)
+        rows, cols = filled.shape
+        stack = np.stack([padded[1 + dy:1 + dy + rows, 1 + dx:1 + dx + cols]
+                          for dy in (-1, 0, 1) for dx in (-1, 0, 1) if dy or dx])
+        counts = np.isfinite(stack).sum(axis=0)
+        sums = np.nansum(stack, axis=0)
+        grow = missing & (counts > 0)
+        if not grow.any():
+            break
+        filled[grow] = sums[grow] / counts[grow]
+    return filled
+
+
+def _near_sites(values: np.ndarray, reach: int) -> np.ndarray:
+    """Cells within ``reach`` cells (8-neighbourhood) of a cell with a site value."""
+    near = np.isfinite(values)
+    for _ in range(reach):
+        padded = np.pad(near, 1, constant_values=False)
+        rows, cols = near.shape
+        near = np.logical_or.reduce([padded[1 + dy:1 + dy + rows, 1 + dx:1 + dx + cols]
+                                     for dy in (-1, 0, 1) for dx in (-1, 0, 1)])
+    return near
+
+
+def smooth_hazard_grid(
+    values: np.ndarray,
+    bounds: tuple[float, float, float, float],
+    spacing: float,
+    clip_polygons: list | None = None,
+    max_cells: int = SMOOTH_MAX_CELLS,
+) -> tuple[np.ndarray, tuple[float, float, float, float]]:
+    """Site grid interpolated bilinearly onto a fine grid, for smooth maps.
+
+    ``values`` and ``bounds`` come from ``hazard_grid`` (north row first). Gaps
+    between sites are filled from neighbours before interpolating, and fine
+    cells are kept only inside ``clip_polygons`` (shapely geometries: the run's
+    provinces, kabupaten or box) and within ``SMOOTH_REACH_CELLS`` site spacings
+    of a site. The interpolated values are a display aid: the computed hazard
+    is the value at each site. Returns ``(fine_values, bounds)``.
+    """
+    west, south, east, north = bounds
+    rows, cols = values.shape
+    step = max((east - west) / max_cells, (north - south) / max_cells, spacing / 16)
+    fine_cols = max(cols, int(np.ceil((east - west) / step)))
+    fine_rows = max(rows, int(np.ceil((north - south) / step)))
+    lon = west + (np.arange(fine_cols) + 0.5) * (east - west) / fine_cols
+    lat = north - (np.arange(fine_rows) + 0.5) * (north - south) / fine_rows
+
+    # Position of each fine cell centre in coarse-cell index space.
+    fx = np.clip((lon - west) / spacing - 0.5, 0, cols - 1)
+    fy = np.clip((north - lat) / spacing - 0.5, 0, rows - 1)
+    j0 = np.minimum(np.floor(fx).astype(int), max(cols - 2, 0))
+    i0 = np.minimum(np.floor(fy).astype(int), max(rows - 2, 0))
+    j1, i1 = np.minimum(j0 + 1, cols - 1), np.minimum(i0 + 1, rows - 1)
+    tx, ty = (fx - j0)[None, :], (fy - i0)[:, None]
+    filled = _fill_from_neighbours(values)
+    fine = ((1 - ty) * (1 - tx) * filled[np.ix_(i0, j0)] + (1 - ty) * tx * filled[np.ix_(i0, j1)]
+            + ty * (1 - tx) * filled[np.ix_(i1, j0)] + ty * tx * filled[np.ix_(i1, j1)])
+
+    near = _near_sites(values, SMOOTH_REACH_CELLS)
+    nearest_i = np.clip(np.rint(fy).astype(int), 0, rows - 1)
+    nearest_j = np.clip(np.rint(fx).astype(int), 0, cols - 1)
+    keep = near[np.ix_(nearest_i, nearest_j)]
+    if clip_polygons:
+        from shapely import contains_xy, prepare
+
+        grid_lon, grid_lat = np.meshgrid(lon, lat)
+        inside = np.zeros(keep.shape, dtype=bool)
+        for polygon in clip_polygons:
+            minx, miny, maxx, maxy = polygon.bounds
+            box = ((grid_lon >= minx) & (grid_lon <= maxx)
+                   & (grid_lat >= miny) & (grid_lat <= maxy) & keep & ~inside)
+            if box.any():
+                prepare(polygon)
+                inside[box] = contains_xy(polygon, grid_lon[box], grid_lat[box])
+        keep &= inside
+    return np.where(keep, fine, np.nan), bounds
 
 
 def hazard_classes(values: np.ndarray, breaks: tuple[float, ...]) -> np.ndarray:

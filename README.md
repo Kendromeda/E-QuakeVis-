@@ -22,23 +22,19 @@ python -m pip install uv
 uv venv --python 3.12 .venv-oq
 uv pip install --python .venv-oq\Scripts\python.exe -r https://raw.githubusercontent.com/gem/oq-engine/engine-3.26/requirements-py312-win64.txt
 uv pip install --python .venv-oq\Scripts\python.exe --no-deps openquake.engine==3.26.2
-.\.venv-oq\Scripts\python.exe scripts\download_gem_idn_model.py
+gh auth login
+.\.venv-oq\Scripts\python.exe scripts\setup_psha_data.py
 ```
 
-Perintah terakhir mengunduh model sumber GEM Indonesia v2024 (lisensi CC BY-NC-SA 4.0, hanya non-komersial) dan memeriksa SHA-256-nya. Datastore OpenQuake bisa berukuran beberapa GB; arahkan ke drive lain dengan `$env:OQ_DATADIR = "D:\oqdata"` sebelum menjalankan perhitungan.
+`setup_psha_data.py` menyiapkan semua data PSHA dan melewati yang sudah ada:
 
-Kondisi situs bawaan adalah batuan Vs30 760 m/s. Untuk memakai Vs30 per situs dari peta global USGS (Heath dkk., 2020), unduh grid-nya sekali (±610 MB) lalu potong ke wilayah Indonesia:
+- model sumber GEM Indonesia v2024 (lisensi CC BY-NC-SA 4.0, hanya non-komersial), dari GEM;
+- Vs30 USGS wilayah Indonesia (Heath dkk., 2020) untuk pilihan "Vs30 USGS per situs";
+- katalog Mw gabungan ISC/ISC-GEM untuk model sumber sendiri (Tahap B).
 
-```powershell
-curl.exe -L -o data\vs30\download\global_vs30.grd https://apps.usgs.gov/shakemap_geodata/vs30/global_vs30.grd
-.\.venv-oq\Scripts\python.exe scripts\prepare_usgs_vs30.py
-```
+Dua yang terakhir diambil siap pakai dari GitHub Release (`data/psha/data_release.json`, diperiksa SHA-256). Repo ini privat, jadi perlu `gh auth login` sekali. Untuk membangunnya ulang dari sumber asli (grid USGS 610 MB; buletin ISC berjam-jam, ditambah ISC-GEM dari formulir http://www.isc.ac.uk/iscgem/request_catalogue.php bila tersedia), tambahkan `--from-source`.
 
-Katalog untuk membangun model sumber sendiri (Tahap B) tidak disimpan di Git dan hanya diperlukan untuk tahap itu:
-
-- Buletin ISC: `.\.venv-oq\Scripts\python.exe scripts\download_isc_bulletin.py` (±5 jam, dapat dilanjutkan bila terputus).
-- ISC-GEM v12.1: minta lewat formulir di http://www.isc.ac.uk/iscgem/request_catalogue.php, lalu salin ke `data/psha/iscgem/`.
-- Lalu bangun katalog Mw gabungan: `.\.venv-oq\Scripts\python.exe scripts\build_mw_catalog.py`. Model sumber per wilayah dibangun dari langkah 2 wizard (atau `scripts\build_source_model.py`).
+Datastore OpenQuake bisa berukuran beberapa GB; arahkan ke drive lain dengan `$env:OQ_DATADIR = "D:\oqdata"` sebelum menjalankan perhitungan. Model sumber per wilayah (Tahap B) dibangun dari langkah 2 wizard.
 
 Rincian sumber, lisensi, dan langkah perhitungan ada di [data/README.md](data/README.md).
 
