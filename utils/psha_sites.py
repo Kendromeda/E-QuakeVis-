@@ -48,6 +48,23 @@ def kabupaten_names(features: list[dict[str, Any]], province: str | None = None)
     return _names(features, KABUPATEN_KEY)
 
 
+def region_polygons(region: dict[str, Any]) -> list:
+    """Shapely polygons of a run's region (manifest ``region``): its kabupaten,
+    provinces (every province when "all" or empty), cut to its box if any."""
+    if region.get("kabupaten"):
+        names, features, key = set(region["kabupaten"]), load_kabupaten_features(), KABUPATEN_KEY
+    else:
+        provinces = region.get("provinces")
+        names = set(provinces) if isinstance(provinces, list) and provinces else None
+        features, key = load_province_features(), PROVINCE_KEY
+    polygons = [shape(f["geometry"]) for f in features if f.get("geometry")
+                and (names is None or f["properties"].get(key) in names)]
+    if region.get("bounds"):
+        box = shapely_box(*region["bounds"])
+        polygons = [p.intersection(box) for p in polygons if p.intersects(box)]
+    return [p for p in polygons if not p.is_empty]
+
+
 def build_sites(
     features: list[dict[str, Any]],
     areas: Iterable[str] | None,
