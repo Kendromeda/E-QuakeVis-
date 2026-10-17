@@ -3224,7 +3224,23 @@ def render_psha_publication(
         basemap = cols[0].selectbox("Basemap", ["Tanpa basemap", *BASEMAP_OPTIONS],
                                     index=1 + list(BASEMAP_OPTIONS).index(BASEMAP_RELIEF))
         padding = cols[1].slider("Ruang tepi peta (%)", 0, 30, 8)
-        cols[2].write("")
+        logo_scale = cols[2].slider(
+            "Perbesaran logo", 0, 100, 0, step=5,
+            help="0 = ukuran standar, 100 = logo dan area logo pada sidebar diperbesar "
+                 "hingga sekitar 3x.")
+        cols = st.columns(2)
+        scale_mode = cols[0].selectbox(
+            "Mode skala publikasi", ("Otomatis sesuai cakupan", "Skala numerik"),
+            help="Skala numerik mengubah cakupan peta secara nyata dengan pusat tetap "
+                 "di tengah area run PSHA.")
+        # A form only reruns on submit, so the denominator is always shown and
+        # read only when "Skala numerik" is chosen.
+        scale_denominator = int(cols[1].number_input(
+            "Penyebut skala (1 : n)", min_value=1_000, max_value=100_000_000,
+            value=250_000, step=10_000, format="%d",
+            help="Dipakai bila mode skala = Skala numerik. Contoh: 250000 untuk "
+                 "1 : 250.000. Raster bahaya hanya ada di dalam batas run; skala "
+                 "besar memotong area run, skala kecil menyisakan area tanpa warna."))
         cols = st.columns(5)
         show_faults = cols[0].checkbox("Sesar", value=True)
         show_trenches = cols[1].checkbox("Palung", value=True)
@@ -3255,6 +3271,8 @@ def render_psha_publication(
             show_faults=show_faults, show_trenches=show_trenches,
             show_provinces=show_provinces, show_region_labels=show_labels,
             template_name=template, selection_bounds=bounds,
+            representative_scale_denominator=(
+                scale_denominator if scale_mode == "Skala numerik" else None),
         )
         with st.status("Membuat peta publikasi...", expanded=True) as status:
             try:
@@ -3268,6 +3286,7 @@ def render_psha_publication(
                     empty, fault_geojson, province_geojson,
                     title=title, institution_name=institution,
                     logo_bytes=logo_file.getvalue() if logo_file else None,
+                    logo_scale_percent=logo_scale,
                     show_inset=show_inset, map_snapshot_bytes=snapshot,
                     # The RTRW template prints this under its title block.
                     map_type_label=f"Peta Bahaya Gempa {region_text}",
