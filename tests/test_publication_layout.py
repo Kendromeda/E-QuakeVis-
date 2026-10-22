@@ -125,21 +125,13 @@ class PublicationLayoutTests(unittest.TestCase):
         self.assertLess(numeric_y, min(call[0][1] for call in bar_labels))
         self.assertIn("0", {call[1] for call in bar_labels})
 
-    def test_legacy_bandung_and_rtrw_templates_are_available(self) -> None:
+    def test_legacy_and_rtrw_templates_are_available(self) -> None:
         self.assertIn("A2 Lanskap", PAGE_SIZES)
         self.assertEqual(
             tuple(PUBLICATION_TEMPLATES),
-            ("Format Lama", "Peta Geologi Lembar Bandung", "Tata Ruang (RTRW)"),
+            ("Format Lama", "Tata Ruang (RTRW)"),
         )
         self.assertEqual(PUBLICATION_HEADER_FILL, "#ffffff")
-
-        standard_sidebar = _publication_layout(
-            "A3 Lanskap", template_name="Format Lama"
-        )[4]
-        bandung_sidebar = _publication_layout(
-            "A3 Lanskap", template_name="Peta Geologi Lembar Bandung"
-        )[4]
-        self.assertGreater(bandung_sidebar[2], standard_sidebar[2])
 
     def test_rtrw_sheet_drops_the_title_band_and_grows_the_map(self) -> None:
         _, legacy_header, _, legacy_map, _ = _publication_layout(

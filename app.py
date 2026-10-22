@@ -1878,8 +1878,7 @@ def render_publication_builder(
                 options=list(PUBLICATION_TEMPLATES),
                 key="publication_template",
                 help=(
-                    "Template Lembar Bandung memperlebar panel legenda. Template Tata "
-                    "Ruang (RTRW) memindahkan judul ke sidebar dan menambahkan "
+                    "Template Tata Ruang (RTRW) memindahkan judul ke sidebar dan menambahkan "
                     "blok proyeksi/datum serta penanda tangan."
                 ),
             )

@@ -57,11 +57,9 @@ PAGE_SIZES = {
     "A2 Lanskap": (3368, 2382),
 }
 PUBLICATION_TEMPLATE_LEGACY = "Format Lama"
-PUBLICATION_TEMPLATE_BANDUNG = "Peta Geologi Lembar Bandung"
 PUBLICATION_TEMPLATE_RTRW = "Tata Ruang (RTRW)"
 PUBLICATION_TEMPLATES = {
     PUBLICATION_TEMPLATE_LEGACY: 0.30,
-    PUBLICATION_TEMPLATE_BANDUNG: 0.42,
     PUBLICATION_TEMPLATE_RTRW: 0.30,
 }
 PUBLICATION_HEADER_FILL = "#ffffff"
@@ -3177,11 +3175,7 @@ def render_publication_map(
         )
         title_rows = max(1, len([line for line in title.splitlines() if line.strip()]))
         title_size = 48 if title_rows == 1 else 39 if title_rows == 2 else 32
-        title_font = (
-            _serif_font(max(28, int(title_size * scale)), bold=True)
-            if template_name == PUBLICATION_TEMPLATE_BANDUNG
-            else _font(max(28, int(title_size * scale)), bold=True)
-        )
+        title_font = _font(max(28, int(title_size * scale)), bold=True)
         _draw_centered_wrapped_text(
             draw,
             title.upper(),
@@ -3753,36 +3747,13 @@ def render_publication_map(
     # Compact legends (see _should_compact_sidebar_legends) use smaller text.
     compact_label_font = _font(max(13, int(15 * scale)))
     compact_small_font = _font(max(11, int(13 * scale)))
-    if template_name == PUBLICATION_TEMPLATE_BANDUNG:
-        bandung_heading = _serif_font(max(18, int(23 * scale)), bold=True)
-        bandung_subheading = _serif_font(
-            max(13, int(16 * scale)),
-            italic=True,
-        )
-        center_x = side_x + side_width // 2
-        draw.text(
-            (center_x, legend_y),
-            "KETERANGAN SATUAN PETA",
-            font=bandung_heading,
-            fill="#111111",
-            anchor="ma",
-        )
-        draw.text(
-            (center_x, legend_y + max(22, int(25 * scale))),
-            "DESCRIPTION OF MAP UNITS",
-            font=bandung_subheading,
-            fill="#333333",
-            anchor="ma",
-        )
-        legend_y += max(50, int(55 * scale))
-    else:
-        draw.text(
-            (side_x + int(24 * scale), legend_y),
-            "KETERANGAN" if template_name == PUBLICATION_TEMPLATE_RTRW else "Legenda",
-            font=heading_font,
-            fill="#111827",
-        )
-        legend_y += int(38 * scale)
+    draw.text(
+        (side_x + int(24 * scale), legend_y),
+        "KETERANGAN" if template_name == PUBLICATION_TEMPLATE_RTRW else "Legenda",
+        font=heading_font,
+        fill="#111827",
+    )
+    legend_y += int(38 * scale)
     if (
         show_basemap
         and legend_basemap_name == BASEMAP_SHORTBREAD
