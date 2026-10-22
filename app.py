@@ -156,13 +156,16 @@ from utils.psha_results import (
     PSHAResultError,
     PSHARun,
     hazard_classes,
+    hazard_column,
     hazard_grid,
+    return_period,
     smooth_hazard_grid,
     hazard_legend_labels,
     list_psha_runs,
     load_hazard_curves,
     load_hazard_map,
     model_label,
+    publication_model_label,
     vs30_label,
     nearest_site,
 )
@@ -1992,6 +1995,16 @@ def render_publication_builder(
         default_title = f"{title_prefix} {region_label}"
         if period_label:
             default_title += f" Periode {period_label}"
+        # A PSHA layer without epicentres is a hazard map: title it after the
+        # IMT and return period chosen below (their state is already known).
+        psha_title_selection = (
+            publication_psha_selection()
+            if st.session_state.get("publication_hazard")
+            and not (has_earthquakes and st.session_state.get("publication_earthquakes", True))
+            else None
+        )
+        if psha_title_selection is not None:
+            default_title = psha_publication_title(*psha_title_selection)
         default_title = default_title[:180]
         # Keep the title in step with the province/kabupaten and period filters
         # until the user types their own; a manual edit is detected as a value
@@ -2062,7 +2075,9 @@ def render_publication_builder(
                 map_type_label = st.text_input(
                     "Jenis peta",
                     value=(
-                        "PETA GEOLOGI" if show_geology else "PETA SEBARAN GEMPA BUMI"
+                        "PETA GEOLOGI" if show_geology
+                        else "PETA BAHAYA GEMPA BUMI" if psha_title_selection is not None
+                        else "PETA SEBARAN GEMPA BUMI"
                     ),
                     key="publication_map_type",
                     help="Ditampilkan pada kotak tersendiri di bawah judul.",
@@ -2177,9 +2192,11 @@ def render_publication_builder(
                 value=show_basemap,
                 key="publication_basemap",
             )
+            # Default via session state, not value=: "Pakai di Peta Publikasi"
+            # on the PSHA tab switches this off from a callback.
+            st.session_state.setdefault("publication_earthquakes", True)
             publication_earthquakes = st.toggle(
                 "Layer titik gempa",
-                value=True,
                 key="publication_earthquakes",
                 help=(
                     "Matikan untuk membuat peta tanpa episenter. Legenda "
@@ -2243,30 +2260,31 @@ def render_publication_builder(
             publication_hazard_run: PSHARun | None = None
             publication_hazard_column = None
             if publication_hazard:
-                publication_hazard_run = st.selectbox(
+                # Plain ids as options (see render_psha_hazard): an object option
+                # outlived an IMT change and mixed one IMT's values with
+                # another's class limits.
+                psha_runs_by_id = {run.run_id: run for run in psha_runs}
+                publication_hazard_run = psha_runs_by_id[st.selectbox(
                     "Hasil PSHA",
-                    psha_runs,
-                    format_func=lambda item: item.run_id,
-                    key="publication_hazard_run",
-                )
+                    list(psha_runs_by_id),
+                    key="publication_hazard_run_id",
+                )]
                 publication_hazard_imt = st.selectbox(
                     "Parameter PSHA",
                     publication_hazard_run.manifest["imts"],
                     format_func=lambda value: IMT_LABELS.get(value, value),
                     key="publication_hazard_imt",
                 )
-                publication_hazard_column = st.radio(
+                publication_hazard_poe = st.radio(
                     "Periode ulang PSHA",
-                    [
-                        column for column in publication_hazard_run.columns
-                        if column.imt == publication_hazard_imt
-                    ],
-                    format_func=lambda item: (
-                        f"{item.return_period_years:,} tahun".replace(",", ".")
-                    ),
+                    [float(value) for value in publication_hazard_run.manifest["poes"]],
+                    format_func=lambda value: psha_period_label(
+                        publication_hazard_run, value),
                     horizontal=True,
-                    key="publication_hazard_period",
+                    key="publication_hazard_poe",
                 )
+                publication_hazard_column = hazard_column(
+                    publication_hazard_run, publication_hazard_imt, publication_hazard_poe)
             publication_geology = show_geology and st.toggle(
                 f"Layer geologi — {geology_style_mode}",
                 value=show_geology,
@@ -2374,7 +2392,6 @@ def render_publication_builder(
                     str(publication_hazard_run.path),
                     (publication_hazard_run.path / "manifest.json").stat().st_mtime_ns,
                     publication_hazard_column.column,
-                    publication_hazard_column.imt,
                     publication_hazard_run.spacing,
                 )
             except (PSHAResultError, OSError) as exc:
@@ -3142,18 +3159,19 @@ def build_psha_raster(
     run_path: str,
     manifest_mtime_ns: int,
     column: str,
-    imt: str,
     spacing: float,
     max_cells: int = SMOOTH_MAX_CELLS,
 ) -> tuple[np.ndarray, tuple[float, float, float, float]]:
     """Smoothed, classified hazard grid for one IMT/return period (cached per result file).
 
     Site values are interpolated onto a fine grid clipped to the run's region,
-    so maps show smooth class areas instead of one square per site.
+    so maps show smooth class areas instead of one square per site. The class
+    limits come from the column's own IMT, so values and legend always match.
     """
     del manifest_mtime_ns  # Cache key only.
     run = next(run for run in list_psha_runs(Path(run_path).parent)
                if str(run.path) == run_path)
+    imt = next(item.imt for item in run.columns if item.column == column)
     values, bounds = hazard_grid(load_hazard_map(run), column, spacing)
     fine, bounds = smooth_hazard_grid(values, bounds, spacing,
                                       region_polygons(run.manifest["region"]), max_cells)
@@ -3175,9 +3193,8 @@ def psha_publication_layer(
         labels=tuple(hazard_legend_labels(HAZARD_BREAKS_G[column.imt])),
         heading=f"{column.imt} {column.return_period_years:,} th (g)".replace(",", "."),
         source=(
-            f"Bahaya gempa: PSHA OpenQuake {manifest['openquake_version']}, model "
-            f"{model_label(manifest)} ({manifest['model']['license']}); rerata logic tree, "
-            f"{vs30_label(manifest['site_condition'])}, grid {run.spacing:g}°"
+            f"Bahaya gempa: PSHA OpenQuake, {publication_model_label(manifest)}, "
+            f"{manifest['model']['license']}, {vs30_label(manifest['site_condition'])}"
         ),
     )
 
@@ -3194,122 +3211,55 @@ def psha_region_label(manifest: dict[str, Any]) -> str:
     return "Indonesia"
 
 
-def render_psha_publication(
-    run: PSHARun,
-    column: HazardColumn,
-    fault_geojson: dict[str, Any],
-    trench_geojson: dict[str, Any],
-    province_geojson: dict[str, Any],
-) -> None:
-    """Publication sheet (layout, legend, scale, inset, logos) of the hazard map shown."""
+def psha_period_label(run: PSHARun, poe: float, *, short: bool = True) -> str:
+    """Return period of one probability of exceedance, e.g. ``2.475 tahun``."""
+    years = round(return_period(float(poe), float(run.manifest["investigation_time_years"])))
+    if short:
+        return f"{years:,} tahun".replace(",", ".")
+    return (f"{years:,} th ({float(poe):.0%}/"
+            f"{run.manifest['investigation_time_years']:g} th)").replace(",", ".")
+
+
+def use_psha_in_publication(run: PSHARun, imt: str, poe: float) -> None:
+    """Button callback: preselect this hazard map as the Peta Publikasi PSHA layer.
+
+    Runs before the script, so the publication widgets can still be set.
+    """
+    st.session_state["publication_hazard"] = True
+    st.session_state["publication_hazard_run_id"] = run.run_id
+    st.session_state["publication_hazard_imt"] = imt
+    st.session_state["publication_hazard_poe"] = float(poe)
+    # A hazard sheet: no epicentres, framed on the run's region.
+    st.session_state["publication_earthquakes"] = False
+    st.session_state["psha_sent_to_publication"] = True
+
+
+def publication_psha_selection() -> tuple[PSHARun, HazardColumn] | None:
+    """Run and column picked for the Peta Publikasi PSHA layer, read from widget
+    state before the widgets are drawn (unset widgets fall back to their first option)."""
+    try:
+        runs = {run.run_id: run for run in list_psha_runs(PSHA_RESULTS_DIR)}
+    except PSHAResultError:
+        return None
+    if not runs:
+        return None
+    run = runs.get(st.session_state.get("publication_hazard_run_id"), next(iter(runs.values())))
+    imt = st.session_state.get("publication_hazard_imt")
+    if imt not in run.manifest["imts"]:
+        imt = run.manifest["imts"][0]
+    poe = st.session_state.get("publication_hazard_poe", run.manifest["poes"][0])
+    try:
+        return run, hazard_column(run, imt, poe)
+    except PSHAResultError:
+        return run, hazard_column(run, imt, run.manifest["poes"][0])
+
+
+def psha_publication_title(run: PSHARun, column: HazardColumn) -> str:
     imt_text = {"PGA": "PGA", "SA(0.2)": "SA 0,2 Detik", "SA(1.0)": "SA 1,0 Detik"}.get(
         column.imt, column.imt)
-    region_text = psha_region_label(run.manifest)
-    default_title = (f"Peta Bahaya Gempa {imt_text} Periode Ulang "
-                     f"{column.return_period_years:,} Tahun".replace(",", ".")
-                     + f" {region_text}")
-    st.caption(
-        "Membuat lembar peta siap cetak dari peta bahaya di atas, memakai template layout yang "
-        "sama dengan tab Peta Publikasi: judul, legenda kelas bahaya, sesar, skala, panah "
-        "utara, peta lokasi, logo, dan sumber data.")
-    with st.form(f"psha_publication_form_{run.run_id}_{column.column}"):
-        title = st.text_input("Judul peta", value=default_title)
-        institution = st.text_input("Nama instansi", value="")
-        logo_file = st.file_uploader("Logo instansi (opsional)", type=["png", "jpg", "jpeg"])
-        cols = st.columns(3)
-        template = cols[0].selectbox("Template layout", list(PUBLICATION_TEMPLATES))
-        page_size = cols[1].selectbox("Ukuran kertas", list(PAGE_SIZES))
-        resolution = cols[2].selectbox("Resolusi", list(PUBLICATION_DPI_OPTIONS))
-        cols = st.columns(3)
-        basemap = cols[0].selectbox("Basemap", ["Tanpa basemap", *BASEMAP_OPTIONS],
-                                    index=1 + list(BASEMAP_OPTIONS).index(BASEMAP_RELIEF))
-        padding = cols[1].slider("Ruang tepi peta (%)", 0, 30, 8)
-        logo_scale = cols[2].slider(
-            "Perbesaran logo", 0, 100, 0, step=5,
-            help="0 = ukuran standar, 100 = logo dan area logo pada sidebar diperbesar "
-                 "hingga sekitar 3x.")
-        cols = st.columns(2)
-        scale_mode = cols[0].selectbox(
-            "Mode skala publikasi", ("Otomatis sesuai cakupan", "Skala numerik"),
-            help="Skala numerik mengubah cakupan peta secara nyata dengan pusat tetap "
-                 "di tengah area run PSHA.")
-        # A form only reruns on submit, so the denominator is always shown and
-        # read only when "Skala numerik" is chosen.
-        scale_denominator = int(cols[1].number_input(
-            "Penyebut skala (1 : n)", min_value=1_000, max_value=100_000_000,
-            value=250_000, step=10_000, format="%d",
-            help="Dipakai bila mode skala = Skala numerik. Contoh: 250000 untuk "
-                 "1 : 250.000. Raster bahaya hanya ada di dalam batas run; skala "
-                 "besar memotong area run, skala kecil menyisakan area tanpa warna."))
-        cols = st.columns(5)
-        show_faults = cols[0].checkbox("Sesar", value=True)
-        show_trenches = cols[1].checkbox("Palung", value=True)
-        show_provinces = cols[2].checkbox("Batas provinsi", value=True)
-        show_labels = cols[3].checkbox("Label wilayah", value=True)
-        show_inset = cols[4].checkbox("Peta lokasi", value=True)
-        submitted = st.form_submit_button("Buat peta publikasi", type="primary")
-
-    result_key = "psha_publication_result"
-    signature = (run.run_id, column.column,
-                 (run.path / "manifest.json").stat().st_mtime_ns)
-    if submitted:
-        output_dpi = PUBLICATION_DPI_OPTIONS[resolution]
-        try:
-            classes, bounds = build_psha_raster(
-                str(run.path), signature[2], column.column, column.imt, run.spacing,
-                max_cells=3600)
-        except (PSHAResultError, OSError) as exc:
-            st.error(str(exc))
-            return
-        layer = psha_publication_layer(run, column, classes, bounds)
-        empty = pd.DataFrame()
-        common = dict(
-            hazard_layer=layer, trench_geojson=trench_geojson, show_earthquakes=False,
-            padding_percent=padding, page_size=page_size, output_dpi=output_dpi,
-            show_basemap=basemap != "Tanpa basemap",
-            basemap_name=basemap if basemap != "Tanpa basemap" else BASEMAP_RELIEF,
-            show_faults=show_faults, show_trenches=show_trenches,
-            show_provinces=show_provinces, show_region_labels=show_labels,
-            template_name=template, selection_bounds=bounds,
-            representative_scale_denominator=(
-                scale_denominator if scale_mode == "Skala numerik" else None),
-        )
-        with st.status("Membuat peta publikasi...", expanded=True) as status:
-            try:
-                status.write("Menggambar peta (basemap diunduh bila dipilih)...")
-                snapshot = capture_filtered_map(
-                    empty, fault_geojson, province_geojson,
-                    output_size=get_publication_map_size(page_size, output_dpi, template),
-                    marker_scale_percent=100, **common)
-                status.write("Menyusun layout...")
-                png_bytes, pdf_bytes = render_publication_map(
-                    empty, fault_geojson, province_geojson,
-                    title=title, institution_name=institution,
-                    logo_bytes=logo_file.getvalue() if logo_file else None,
-                    logo_scale_percent=logo_scale,
-                    show_inset=show_inset, map_snapshot_bytes=snapshot,
-                    # The RTRW template prints this under its title block.
-                    map_type_label=f"Peta Bahaya Gempa {region_text}",
-                    source_text="", **common)
-            except PublicationMapError as exc:
-                status.update(label="Peta publikasi gagal dibuat.", state="error")
-                st.error(str(exc))
-                return
-            status.update(label="Peta publikasi selesai.", state="complete", expanded=False)
-        st.session_state[result_key] = {"signature": signature, "png": png_bytes,
-                                        "pdf": pdf_bytes, "title": title}
-
-    result = st.session_state.get(result_key)
-    if result is None or result["signature"] != signature:
-        return
-    st.image(result["png"], width="stretch")
-    stem = publication_filename_stem(result["title"])
-    left, right = st.columns(2)
-    left.download_button("Unduh PNG", data=result["png"], file_name=f"{stem}.png",
-                         mime="image/png", width="stretch", key="psha_pub_png")
-    if result["pdf"]:
-        right.download_button("Unduh PDF", data=result["pdf"], file_name=f"{stem}.pdf",
-                              mime="application/pdf", width="stretch", key="psha_pub_pdf")
+    years = f"{column.return_period_years:,}".replace(",", ".")
+    return (f"Peta Bahaya Gempa {imt_text} Periode Ulang {years} Tahun "
+            f"{psha_region_label(run.manifest)}")
 
 
 def format_g(value: float) -> str:
@@ -3588,40 +3538,40 @@ def render_psha_hazard(
         )
         return
 
+    # Widgets hold plain ids, never PSHARun/HazardColumn objects: Streamlit kept
+    # a stale column object after the IMT changed, which coloured PGA values
+    # with the SA class limits.
     controls = st.columns([2, 2, 2])
-    run = controls[0].selectbox(
+    runs_by_id = {item.run_id: item for item in runs}
+    run = runs_by_id[controls[0].selectbox(
         "Hasil perhitungan",
-        runs,
-        format_func=lambda item: (
-            f"{item.run_id} · {item.manifest['model']['model_version']} · "
-            f"{int(item.manifest['num_sites']):,} situs".replace(",", ".")
+        list(runs_by_id),
+        format_func=lambda run_id: (
+            f"{run_id} · {runs_by_id[run_id].manifest['model']['model_version']} · "
+            f"{int(runs_by_id[run_id].manifest['num_sites']):,} situs".replace(",", ".")
         ),
-        key="psha_run",
-    )
+        key="psha_run_id",
+    )]
     imt = controls[1].selectbox(
         "Parameter guncangan",
         run.manifest["imts"],
         format_func=lambda value: IMT_LABELS.get(value, value),
         key="psha_imt",
     )
-    imt_columns = [column for column in run.columns if column.imt == imt]
-    column = controls[2].radio(
+    poe = controls[2].radio(
         "Periode ulang",
-        imt_columns,
-        format_func=lambda item: (
-            f"{item.return_period_years:,} th ({item.poe:.0%}/"
-            f"{run.manifest['investigation_time_years']:g} th)"
-        ).replace(",", "."),
+        [float(value) for value in run.manifest["poes"]],
+        format_func=lambda value: psha_period_label(run, value, short=False),
         horizontal=True,
-        key="psha_period",
+        key="psha_poe",
     )
     try:
+        column = hazard_column(run, imt, poe)
         hazard_df = load_hazard_map(run)
         classes, bounds = build_psha_raster(
             str(run.path),
             (run.path / "manifest.json").stat().st_mtime_ns,
             column.column,
-            imt,
             run.spacing,
         )
     except (PSHAResultError, OSError) as exc:
@@ -3735,8 +3685,23 @@ def render_psha_hazard(
         mime="text/csv",
         key="psha_grid_download",
     )
-    with st.expander("Buat peta publikasi (layout siap cetak)"):
-        render_psha_publication(run, column, fault_geojson, trench_geojson, province_geojson)
+    publish_columns = st.columns([1, 2], vertical_alignment="center")
+    publish_columns[0].button(
+        "Pakai di Peta Publikasi",
+        key="psha_to_publication",
+        on_click=use_psha_in_publication,
+        args=(run, imt, poe),
+        help="Menyalakan layer bahaya gempa pada tab Peta Publikasi dengan hasil, "
+             "parameter, dan periode ulang yang sedang ditampilkan.",
+    )
+    if st.session_state.pop("psha_sent_to_publication", False):
+        publish_columns[1].success(
+            "Layer PSHA sudah dipilih. Buka tab \"Peta Publikasi\" untuk mengatur "
+            "layout, skala, logo, lalu membuat peta siap cetak.")
+    else:
+        publish_columns[1].caption(
+            "Peta siap cetak (layout, skala 1 : n, logo, peta lokasi) dibuat di tab "
+            "\"Peta Publikasi\" dengan menyalakan \"Layer bahaya gempa (PSHA)\".")
     render_psha_validation(run)
     st.caption(
         "Peta bahaya probabilistik (uniform hazard) pada batuan referensi, rerata "

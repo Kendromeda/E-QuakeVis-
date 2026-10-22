@@ -197,3 +197,30 @@ def test_model_label_names_scientific_basis():
         "PuSGeN 2024 via GEM IDN v2024.0.0")
     assert model_label({"model": {"model_version": "v2017.1.0"}}) == (
         "PuSGeN 2017 (Irsyam dkk.) via GEM IDN v2017.1.0")
+
+
+def test_publication_model_label_leaves_out_the_project_name():
+    from utils.psha_results import publication_model_label
+
+    own = {"model": {"model_version": "v2024.0.0"},
+           "source_model": {"name": "ntt_revisi1_sumber"}}
+    label = publication_model_label(own)
+    assert "ntt_revisi1_sumber" not in label
+    assert label == "katalog Mw + PuSGeN 2024 (GEM IDN v2024.0.0)"
+    assert publication_model_label({"model": {"model_version": "v2024.0.0"}}) == (
+        "PuSGeN 2024 (GEM IDN v2024.0.0)")
+
+
+def test_hazard_column_matches_imt_and_return_period(tmp_path):
+    from utils.psha_results import hazard_column
+
+    write_run(tmp_path, "dua_imt", imts=["PGA", "SA(0.2)"])
+    run = list_psha_runs(tmp_path)[0]
+    # The same probability picks the column of the requested IMT, never another
+    # IMT's column (a stale widget object once coloured PGA with SA limits).
+    assert hazard_column(run, "SA(0.2)", 0.02).column == "SA(0.2)-0.02"
+    assert hazard_column(run, "PGA", 0.1).return_period_years == 475
+    with pytest.raises(PSHAResultError):
+        hazard_column(run, "SA(1.0)", 0.02)
+    with pytest.raises(PSHAResultError):
+        hazard_column(run, "PGA", 0.05)

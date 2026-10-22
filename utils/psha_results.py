@@ -72,6 +72,14 @@ def model_label(manifest: dict[str, Any]) -> str:
     return f"{basis} via GEM IDN {version}"
 
 
+def publication_model_label(manifest: dict[str, Any]) -> str:
+    """Short model credit for a printed map, without the project name."""
+    version = str(manifest["model"]["model_version"])
+    if manifest.get("source_model"):
+        return f"katalog Mw + PuSGeN 2024 (GEM IDN {version})"
+    return model_label(manifest).replace(" via GEM IDN ", " (GEM IDN ") + ")"
+
+
 class PSHAResultError(ValueError):
     """A PSHA result folder is missing, incomplete or inconsistent."""
 
@@ -113,6 +121,14 @@ def hazard_columns(manifest: dict[str, Any]) -> list[HazardColumn]:
         HazardColumn(imt, float(poe), round(return_period(float(poe), time_span)), f"{imt}-{poe}")
         for imt in manifest["imts"] for poe in manifest["poes"]
     ]
+
+
+def hazard_column(run: PSHARun, imt: str, poe: float) -> HazardColumn:
+    """The run's hazard-map column for one IMT and probability of exceedance."""
+    for column in run.columns:
+        if column.imt == imt and math.isclose(column.poe, float(poe)):
+            return column
+    raise PSHAResultError(f"Run {run.run_id} tidak memiliki kolom {imt} untuk peluang {poe}.")
 
 
 def _read_manifest(run_dir: Path) -> dict[str, Any]:
