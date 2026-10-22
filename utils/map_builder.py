@@ -22,13 +22,6 @@ from utils.volcano_data import (
     get_volcano_feature_name,
     iter_volcano_points,
 )
-from utils.geology_layer import (
-    GEOLOGY_LAYER_NAME,
-    GEOLOGY_MAPSERVER_URL,
-    add_dynamic_geology_layer,
-    build_geology_region_filter,
-)
-from utils.geology_catalog import GEOLOGY_STYLE_OFFICIAL
 
 
 DEFAULT_CENTER = (-6.2088, 106.8456)
@@ -150,20 +143,7 @@ def _add_collapsible_legend_styles(earthquake_map: folium.Map) -> None:
             .map-legend-tectonic{right:10px;bottom:66px;}
             .map-legend-density{right:10px;top:54px;}
             .map-legend-hazard{right:10px;top:54px;max-width:300px;}
-            .map-legend-geology{left:10px;bottom:110px;max-width:440px;}
             .map-legend-subtitle{font-weight:600;margin:2px 0 6px;}
-            .geology-legend-grid{display:grid;grid-template-columns:1fr 1fr;
-              gap:3px 12px;margin:4px 0 7px;}
-            .geology-legend-row{display:flex;align-items:center;white-space:nowrap;
-              font-size:10px;}
-            .geology-legend-row span{width:13px;height:11px;border:1px solid #374151;
-              margin-right:5px;box-sizing:border-box;flex:0 0 auto;}
-            .geology-legend-note{border-top:1px solid #d1d5db;border-bottom:1px solid #d1d5db;
-              margin:5px 0;padding:5px 0;font-size:10px;line-height:1.35;}
-            .geology-formation-index{margin-top:6px;border-top:1px solid #d1d5db;padding-top:4px;}
-            .geology-formation-row{display:flex;gap:6px;padding:5px 0;border-bottom:1px solid #e5e7eb;}
-            .geology-formation-row>span{width:14px;height:14px;border:1px solid #374151;flex:0 0 auto;}
-            .geology-formation-row small{display:block;max-width:360px;line-height:1.3;color:#374151;}
             .density-legend-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;}
             .density-legend-row{display:flex;align-items:center;white-space:nowrap;}
             .density-legend-row span{width:14px;height:12px;border:1px solid #111827;
@@ -786,10 +766,6 @@ def _add_thematic_panes(earthquake_map: folium.Map) -> None:
     pane_setup._template = Template(
         """
         {% macro script(this, kwargs) %}
-        var geologyPane = {{ this._parent.get_name() }}.getPane('geologyPane')
-            || {{ this._parent.get_name() }}.createPane('geologyPane');
-        geologyPane.style.zIndex = 340;
-        geologyPane.style.pointerEvents = 'none';
         var hazardPane = {{ this._parent.get_name() }}.getPane('hazardPane')
             || {{ this._parent.get_name() }}.createPane('hazardPane');
         hazardPane.style.zIndex = 345;
@@ -3066,11 +3042,6 @@ def build_indonesia_map(
     show_layer_control: bool = True,
     show_map_scale: bool = True,
     show_distance_measure: bool = True,
-    include_geology_layer: bool = True,
-    geology_initially_visible: bool = False,
-    geology_units: Collection[dict[str, Any]] | None = None,
-    geology_selected_keys: Collection[str] | None = None,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     zoom_snap: float = 1.0,
     earthquake_marker_scale: float = 1.0,
     embed_earthquake_layer: bool = True,
@@ -3092,23 +3063,6 @@ def build_indonesia_map(
     )
     _add_thematic_panes(earthquake_map)
     _add_collapsible_legend_styles(earthquake_map)
-    if include_geology_layer:
-        geology_region_filter, geology_region_label = build_geology_region_filter(
-            province_geojson=province_geojson,
-            district_geojson=district_geojson,
-            province_names=province_names,
-            district_names=district_names,
-        )
-        add_dynamic_geology_layer(
-            earthquake_map,
-            region_filter_geojson=geology_region_filter,
-            region_filter_label=geology_region_label,
-            initially_visible=geology_initially_visible,
-            geology_units=geology_units,
-            selected_formation_keys=geology_selected_keys,
-            show_full_formation_names=bool(district_names),
-            style_mode=geology_style_mode,
-        )
     if show_distance_measure:
         _add_distance_measure_control(earthquake_map)
     volcano_bounds = (

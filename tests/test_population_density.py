@@ -398,7 +398,6 @@ class PopulationDensityTest(unittest.TestCase):
             district_names=["Kota Bandung"],
             show_population_density=True,
             show_basemap=False,
-            include_geology_layer=False,
         ).get_root().render()
 
         self.assertIn(POPULATION_DENSITY_DISTRICT_LAYER_NAME, html)

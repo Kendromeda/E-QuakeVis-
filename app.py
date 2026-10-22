@@ -75,15 +75,6 @@ from utils.map_builder import (
     zoom_to_fit,
     get_earthquake_event_id,
 )
-from utils.geology_catalog import (
-    GEOLOGY_STYLE_OFFICIAL,
-    GEOLOGY_STYLE_OPTIONS,
-    GeologyUnit,
-    merge_geology_units,
-    query_geology_features_for_region,
-    query_geology_units_for_province,
-    query_geology_units_for_region,
-)
 from utils.population_density import (
     PopulationDensityDataError,
     filter_population_density,
@@ -99,7 +90,6 @@ from utils.seismic_station import (
 from utils.publication_map import (
     PAGE_SIZES,
     PUBLICATION_DPI_OPTIONS,
-    PUBLICATION_TEMPLATE_BANDUNG,
     PUBLICATION_TEMPLATE_LEGACY,
     PUBLICATION_TEMPLATE_RTRW,
     PUBLICATION_TEMPLATES,
@@ -107,8 +97,6 @@ from utils.publication_map import (
     PublicationMapError,
     capture_filtered_map,
     get_publication_map_size,
-    list_visible_geology_units,
-    plan_geology_legend_overflow,
     publication_filename_stem,
     render_publication_map,
 )
@@ -692,33 +680,6 @@ def load_region_reference(path: str, modified_time: int) -> dict[str, Any]:
     return load_region_geojson(Path(path))
 
 
-@st.cache_data(ttl=86_400, show_spinner=False)
-def load_geology_units_for_province(
-    province_name: str,
-    province_boundary_signature: int,
-    province_geojson: dict[str, Any],
-) -> tuple[GeologyUnit, ...]:
-    """Cache Layer 8 attributes; full polygon geometry remains on BIG's server."""
-    del province_boundary_signature
-    return query_geology_units_for_province(province_geojson, province_name)
-
-
-@st.cache_data(ttl=86_400, show_spinner=False)
-def load_geology_units_for_districts(
-    district_names: tuple[str, ...],
-    district_boundary_signature: int,
-    district_geojson: dict[str, Any],
-) -> tuple[GeologyUnit, ...]:
-    """Return units intersecting the effective district filter for publication."""
-    del district_boundary_signature
-    return query_geology_units_for_region(
-        district_geojson,
-        district_names,
-        property_name="WADMKK",
-        timeout=15.0,
-    )
-
-
 @st.cache_data(show_spinner=False)
 def load_coastal_reference(path: str, modified_time: int) -> dict[str, Any]:
     del modified_time
@@ -1202,108 +1163,6 @@ def render_sidebar_filters(
             f"{density_description} Rentang otomatis {density_min:,}–{density_max:,} "
             "jiwa/km².".replace(",", ".")
         )
-    show_geology = st.sidebar.toggle(
-        "Layer geologi — BIG/KSP",
-        value=False,
-        help=(
-            "Poligon resmi Peta Geologi Layer 8 PSG/BIG. Warna menunjukkan "
-            "umur batuan, sedangkan nama/sandi menunjukkan unit atau formasi."
-        ),
-    )
-    geology_style_mode = GEOLOGY_STYLE_OFFICIAL
-    if show_geology:
-        geology_style_mode = st.sidebar.selectbox(
-            "Mode warna geologi",
-            options=GEOLOGY_STYLE_OPTIONS,
-            index=0,
-            help=(
-                "Resmi BIG/KSP mengikuti renderer Layer 8 apa adanya. CGMW 2022 "
-                "adalah alternatif standardisasi warna umur internasional."
-            ),
-            key="geology_style_mode",
-        )
-    geology_units: tuple[GeologyUnit, ...] = ()
-    geology_index_units: tuple[GeologyUnit, ...] | None = None
-    geology_catalog_loaded = False
-    selected_geology_keys: list[str] = []
-    if show_geology and not selected_provinces:
-        st.sidebar.caption(
-            "Pilih minimal satu provinsi untuk membuka filter unit/formasi. "
-            "Layer nasional tetap dapat ditampilkan tanpa filter formasi."
-        )
-    elif show_geology:
-        try:
-            with st.sidebar:
-                with st.spinner("Memuat indeks unit/formasi geologi…"):
-                    geology_units = merge_geology_units(
-                        load_geology_units_for_province(
-                            province_name,
-                            PROVINCE_DATA_PATH.stat().st_mtime_ns,
-                            province_geojson,
-                        )
-                        for province_name in selected_provinces
-                    )
-                    geology_catalog_loaded = True
-        except (OSError, ValueError, TimeoutError) as exc:
-            st.sidebar.warning(
-                "Indeks formasi BIG sedang tidak dapat dimuat. Layer geologi "
-                f"tetap tersedia tanpa filter formasi. ({exc})"
-            )
-        if geology_catalog_loaded:
-            geology_index_units = geology_units
-            if selected_districts:
-                try:
-                    geology_index_units = load_geology_units_for_districts(
-                        tuple(sorted(selected_districts)),
-                        DISTRICT_DATA_PATH.stat().st_mtime_ns,
-                        district_geojson,
-                    )
-                except (OSError, ValueError, TimeoutError) as exc:
-                    geology_index_units = None
-                    st.sidebar.warning(
-                        "Indeks publikasi untuk kabupaten/kota belum dapat "
-                        f"diverifikasi dari BIG. ({exc})"
-                    )
-        if geology_units:
-            unit_by_key = {unit.key: unit for unit in geology_units}
-            stored_geology_keys = list(
-                st.session_state.get("selected_geology_formation_keys", [])
-            )
-            valid_stored_keys = [
-                key for key in stored_geology_keys if key in unit_by_key
-            ]
-            if valid_stored_keys != stored_geology_keys:
-                st.session_state["selected_geology_formation_keys"] = (
-                    valid_stored_keys
-                )
-            selected_geology_keys = st.sidebar.multiselect(
-                "Unit/Formasi geologi",
-                options=list(unit_by_key),
-                format_func=lambda key: (
-                    f"{unit_by_key[key].display_name} ({unit_by_key[key].age})"
-                ),
-                placeholder="Semua unit yang beririsan",
-                help=(
-                    "Daftar atribut tanpa geometri, dicache 24 jam. Kosong berarti "
-                    "semua unit yang beririsan dengan provinsi terpilih."
-                ),
-                key="selected_geology_formation_keys",
-            )
-            st.sidebar.caption(
-                f"{len(geology_units)} unit/formasi beririsan dengan provinsi "
-                "terpilih; geometri peta tetap dirender sebagai PNG ringan."
-            )
-            if selected_districts and geology_index_units is not None:
-                st.sidebar.caption(
-                    f"Indeks publikasi dibatasi menjadi {len(geology_index_units)} "
-                    "unit yang beririsan dengan kabupaten/kota aktif."
-                )
-            if selected_geology_keys:
-                with st.sidebar.expander("Keterangan unit terpilih"):
-                    for key in selected_geology_keys:
-                        unit = unit_by_key[key]
-                        st.markdown(f"**{unit.display_name}**")
-                        st.caption(unit.description)
     show_faults = st.sidebar.toggle("Tampilkan sesar", value=True)
     selected_fault_provinces: list[str] = []
     if show_faults:
@@ -1613,15 +1472,6 @@ def render_sidebar_filters(
             selected_density_provinces,
             selected_density_regions,
             population_density_range,
-            show_geology,
-            geology_style_mode,
-            [unit.to_dict() for unit in geology_units],
-            (
-                None
-                if geology_index_units is None
-                else [unit.to_dict() for unit in geology_index_units]
-            ),
-            selected_geology_keys,
         )
 
     start_date, end_date = date_value
@@ -1650,15 +1500,6 @@ def render_sidebar_filters(
             selected_density_provinces,
             selected_density_regions,
             population_density_range,
-            show_geology,
-            geology_style_mode,
-            [unit.to_dict() for unit in geology_units],
-            (
-                None
-                if geology_index_units is None
-                else [unit.to_dict() for unit in geology_index_units]
-            ),
-            selected_geology_keys,
         )
 
     return (
@@ -1698,15 +1539,6 @@ def render_sidebar_filters(
         selected_density_provinces,
         selected_density_regions,
         population_density_range,
-        show_geology,
-        geology_style_mode,
-        [unit.to_dict() for unit in geology_units],
-        (
-            None
-            if geology_index_units is None
-            else [unit.to_dict() for unit in geology_index_units]
-        ),
-        selected_geology_keys,
     )
 
 
@@ -1955,18 +1787,9 @@ def render_publication_builder(
     show_shortbread_topography: bool,
     show_stations: bool = False,
     station_records: list | None = None,
-    show_geology: bool = False,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    geology_units: list[dict[str, Any]] | None = None,
-    geology_index_units: list[dict[str, Any]] | None = None,
-    selected_geology_keys: list[str] | None = None,
     selection_bounds: tuple[float, float, float, float] | None = None,
 ) -> None:
     station_records = station_records or []
-    geology_units = geology_units or []
-    if geology_index_units is not None:
-        geology_index_units = list(geology_index_units)
-    selected_geology_keys = selected_geology_keys or []
     # Sudah berada di tab sendiri, jadi panel tidak perlu ditutup lagi.
     with st.expander("Buat Peta Publikasi", expanded=True):
         st.caption(
@@ -2048,25 +1871,14 @@ def render_publication_builder(
 
         control_left, control_right = st.columns(2)
         with control_left:
-            if st.session_state.get("_publication_template_geology_state") != show_geology:
-                st.session_state["publication_template"] = (
-                    PUBLICATION_TEMPLATE_BANDUNG
-                    if show_geology
-                    else PUBLICATION_TEMPLATE_LEGACY
-                )
-                st.session_state["_publication_template_geology_state"] = show_geology
             if st.session_state.get("publication_template") not in PUBLICATION_TEMPLATES:
-                st.session_state["publication_template"] = (
-                    PUBLICATION_TEMPLATE_BANDUNG
-                    if show_geology
-                    else PUBLICATION_TEMPLATE_LEGACY
-                )
+                st.session_state["publication_template"] = PUBLICATION_TEMPLATE_LEGACY
             publication_template = st.selectbox(
                 "Template layout",
                 options=list(PUBLICATION_TEMPLATES),
                 key="publication_template",
                 help=(
-                    "Template geologi memperlebar panel legenda. Template Tata "
+                    "Template Lembar Bandung memperlebar panel legenda. Template Tata "
                     "Ruang (RTRW) memindahkan judul ke sidebar dan menambahkan "
                     "blok proyeksi/datum serta penanda tangan."
                 ),
@@ -2075,8 +1887,7 @@ def render_publication_builder(
                 map_type_label = st.text_input(
                     "Jenis peta",
                     value=(
-                        "PETA GEOLOGI" if show_geology
-                        else "PETA BAHAYA GEMPA BUMI" if psha_title_selection is not None
+                        "PETA BAHAYA GEMPA BUMI" if psha_title_selection is not None
                         else "PETA SEBARAN GEMPA BUMI"
                     ),
                     key="publication_map_type",
@@ -2285,29 +2096,6 @@ def render_publication_builder(
                 )
                 publication_hazard_column = hazard_column(
                     publication_hazard_run, publication_hazard_imt, publication_hazard_poe)
-            publication_geology = show_geology and st.toggle(
-                f"Layer geologi — {geology_style_mode}",
-                value=show_geology,
-                key="publication_geology",
-                disabled=not show_geology,
-                help=(
-                    "Mengikuti filter unit/formasi pada sidebar. PDF menambahkan "
-                    "indeks unit dan ringkasan atribut bila diperlukan."
-                ),
-            )
-            publication_geology_source = st.radio(
-                "Sumber gambar geologi",
-                options=("Render resmi BIG", "Poligon lokal"),
-                key="publication_geology_source",
-                disabled=not publication_geology,
-                help=(
-                    "Render resmi BIG memakai simbolisasi server dan butuh "
-                    "koneksi setiap kali peta dibuat. Poligon lokal mengunduh "
-                    "geometrinya lalu menggambar sendiri: warna per formasi "
-                    "terkendali dan label ditempatkan lokal, tetapi geometri "
-                    "digeneralisasi dan hasilnya bukan render resmi BIG."
-                ),
-            )
             publication_provinces = st.toggle(
                 "Batas provinsi",
                 value=show_provinces,
@@ -2330,58 +2118,6 @@ def render_publication_builder(
             key="publication_source",
             help="Sumber layer lain ditambahkan otomatis sesuai layer yang aktif.",
         )
-        # Resolved once so the snapshot, the sheet and the caption below all
-        # size the overflow legend from an identical unit list.
-        publication_geology_units = (
-            list_visible_geology_units(
-                geology_units,
-                geology_index_units,
-                catalog_known=geology_index_units is not None,
-                selected_geology_keys=selected_geology_keys,
-            )
-            if publication_geology
-            else []
-        )
-        publication_geology_labels = [
-            unit.display_name for unit in publication_geology_units
-        ]
-        if publication_geology:
-            index_scope = (
-                ", ".join(selected_districts)
-                if selected_districts
-                else ", ".join(selected_provinces) or "Indonesia"
-            )
-            if geology_index_units is None:
-                st.caption(
-                    "Indeks PDF memakai legenda umur karena katalog unit pada "
-                    f"cakupan {index_scope} belum tersedia."
-                )
-            else:
-                effective_index_count = len(publication_geology_units)
-                overflow_plan = plan_geology_legend_overflow(
-                    page_size,
-                    output_dpi,
-                    publication_template,
-                    unit_count=effective_index_count,
-                    unit_labels=publication_geology_labels,
-                )
-                placements = [
-                    f"{effective_index_count - overflow_plan.overflow_count} "
-                    "pada legenda sidebar"
-                ]
-                if overflow_plan.capacity:
-                    placements.append(
-                        f"{min(overflow_plan.capacity, overflow_plan.overflow_count)} "
-                        "pada blok legenda di samping peta"
-                    )
-                if overflow_plan.remainder:
-                    placements.append(
-                        f"{overflow_plan.remainder} pada indeks PDF lanjutan"
-                    )
-                st.caption(
-                    f"{effective_index_count} unit/formasi beririsan dengan "
-                    f"{index_scope}: " + ", ".join(placements) + "."
-                )
         logo_bytes = logo_file.getvalue() if logo_file else b""
         second_logo_bytes = second_logo_file.getvalue() if second_logo_file else b""
         publication_hazard_layer: PublicationHazardLayer | None = None
@@ -2422,10 +2158,9 @@ def render_publication_builder(
         publication_hasher.update(publication_row_hashes.tobytes())
         publication_settings = "|".join(
             [
-                "publication-layout-v16-local-geology-polygons",
+                "publication-layout-v17",
                 map_type_label,
                 str(publication_earthquakes),
-                publication_geology_source,
                 publication_template,
                 title,
                 institution_name,
@@ -2454,18 +2189,6 @@ def render_publication_builder(
                 str(len(station_records)),
                 str(publication_population_density),
                 str(publication_population_density_legend),
-                str(publication_geology),
-                geology_style_mode,
-                ",".join(selected_geology_keys),
-                ",".join(sorted(str(unit.get("key") or "") for unit in geology_units)),
-                (
-                    "unknown"
-                    if geology_index_units is None
-                    else ",".join(sorted(
-                        str(unit.get("key") or "")
-                        for unit in geology_index_units
-                    ))
-                ),
                 str(len((population_density_geojson or {}).get("features", []))),
                 str(publication_provinces),
                 str(publication_region_labels),
@@ -2530,36 +2253,6 @@ def render_publication_builder(
                 )
 
             try:
-                publication_geology_features: tuple[dict, ...] = ()
-                if publication_geology and publication_geology_source == "Poligon lokal":
-                    publication_status.update(
-                        label="Mengunduh poligon geologi dari layanan BIG...",
-                        state="running",
-                        expanded=True,
-                    )
-                    try:
-                        if selected_districts:
-                            publication_geology_features = (
-                                query_geology_features_for_region(
-                                    district_geojson, selected_districts, "WADMKK"
-                                )
-                            )
-                        else:
-                            publication_geology_features = (
-                                query_geology_features_for_region(
-                                    province_geojson, selected_provinces, "PROVINSI"
-                                )
-                            )
-                    except (OSError, ValueError) as exc:
-                        raise PublicationMapError(
-                            "Poligon geologi tidak dapat diunduh dari layanan BIG "
-                            f"({exc}). Pilih 'Render resmi BIG' atau coba lagi."
-                        ) from exc
-                    if not publication_geology_features:
-                        raise PublicationMapError(
-                            "Layanan BIG tidak mengembalikan poligon geologi untuk "
-                            "wilayah ini. Pilih 'Render resmi BIG'."
-                        )
                 map_snapshot = capture_filtered_map(
                     filtered_df,
                     fault_geojson,
@@ -2579,10 +2272,6 @@ def render_publication_builder(
                         page_size,
                         output_dpi,
                         publication_template,
-                        # The snapshot has to be sized for the same map slot the
-                        # sheet will have, including any overflow legend column.
-                        geology_unit_count=len(publication_geology_units),
-                        geology_unit_labels=publication_geology_labels,
                     ),
                     padding_percent=map_padding,
                     marker_scale_percent=marker_scale,
@@ -2599,11 +2288,6 @@ def render_publication_builder(
                     fault_feature_indexes=visible_fault_indexes,
                     province_names=selected_provinces,
                     district_names=selected_districts,
-                    show_geology=publication_geology,
-                    geology_features=publication_geology_features,
-                    geology_units=geology_units,
-                    selected_geology_keys=selected_geology_keys,
-                    geology_style_mode=geology_style_mode,
                     representative_scale_denominator=(
                         publication_scale_denominator
                     ),
@@ -2656,15 +2340,6 @@ def render_publication_builder(
                     source_text=source_text,
                     map_snapshot_bytes=map_snapshot,
                     map_type_label=map_type_label,
-                    show_geology=publication_geology,
-                    geology_features=publication_geology_features,
-                    geology_units=geology_units,
-                    geology_legend_units=geology_index_units,
-                    geology_legend_catalog_known=(
-                        geology_index_units is not None
-                    ),
-                    selected_geology_keys=selected_geology_keys,
-                    geology_style_mode=geology_style_mode,
                     representative_scale_denominator=(
                         publication_scale_denominator
                     ),
@@ -3594,7 +3269,6 @@ def render_psha_hazard(
         show_region_labels=False,
         show_tectonic_legend=False,
         show_layer_control=False,
-        include_geology_layer=False,
         show_distance_measure=False,
     )
     folium.GeoJson(
@@ -3920,11 +3594,6 @@ def render_results(
     selected_density_provinces: list[str],
     selected_density_regions: list[str],
     population_density_range: tuple[int, int],
-    show_geology: bool,
-    geology_style_mode: str,
-    geology_units: list[dict[str, Any]],
-    geology_index_units: list[dict[str, Any]] | None,
-    selected_geology_keys: list[str],
 ) -> None:
     map_extent_df = all_earthquakes_df
     if selected_districts:
@@ -3973,11 +3642,6 @@ def render_results(
         district_names=selected_districts,
         show_region_labels=show_region_labels,
         show_layer_control=False,
-        include_geology_layer=show_geology,
-        geology_initially_visible=show_geology,
-        geology_units=geology_units,
-        geology_selected_keys=selected_geology_keys,
-        geology_style_mode=geology_style_mode,
         embed_earthquake_layer=False,
     )
     Draw(
@@ -4044,10 +3708,6 @@ def render_results(
         tuple(selected_density_regions),
         population_density_range,
         len((population_density_geojson or {}).get("features", [])),
-        show_geology,
-        geology_style_mode,
-        tuple(selected_geology_keys),
-        tuple(unit.get("key", "") for unit in geology_units),
     )
 
     (
@@ -4220,11 +3880,6 @@ def render_results(
             show_shortbread_topography,
             show_stations,
             station_records,
-            show_geology,
-            geology_style_mode,
-            geology_units,
-            geology_index_units,
-            selected_geology_keys,
             selection_bounds=selection_bbox,
         )
 
@@ -4401,7 +4056,6 @@ def main() -> None:
                 volcano_geojson=volcano_geojson,
                 trench_geojson=trench_geojson,
                 province_geojson=province_geojson,
-                include_geology_layer=False,
             ),
             width=None,
             height=700,
@@ -4432,11 +4086,6 @@ def main() -> None:
         selected_density_provinces,
         selected_density_regions,
         population_density_range,
-        show_geology,
-        geology_style_mode,
-        geology_units,
-        geology_index_units,
-        selected_geology_keys,
     ) = render_sidebar_filters(
         clean_df,
         population_density_df,
@@ -4523,11 +4172,6 @@ def main() -> None:
         selected_density_provinces,
         selected_density_regions,
         population_density_range,
-        show_geology,
-        geology_style_mode,
-        geology_units,
-        geology_index_units,
-        selected_geology_keys,
     )
 
 

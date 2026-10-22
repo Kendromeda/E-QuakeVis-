@@ -6,7 +6,6 @@ from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from functools import lru_cache
 import hashlib
-import heapq
 from io import BytesIO
 import math
 import os
@@ -14,8 +13,7 @@ from pathlib import Path
 import re
 import threading
 import time
-import textwrap
-from typing import Any, Callable, Collection, Iterable, NamedTuple
+from typing import Any, Callable, Collection, Iterable
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -51,17 +49,6 @@ from utils.map_builder import (
     _largest_outer_ring,
     _ring_centroid,
 )
-from utils.geology_catalog import (
-    GEOLOGY_MAPSERVER_URL,
-    GEOLOGY_STYLE_CGMW,
-    GEOLOGY_STYLE_OFFICIAL,
-    GeologyUnit,
-    build_dynamic_layers,
-    build_geology_unit_colors,
-    geology_age_legend,
-    geology_render_key,
-    get_geology_age_style,
-)
 
 
 PAGE_SIZES = {
@@ -79,22 +66,6 @@ PUBLICATION_TEMPLATES = {
 }
 PUBLICATION_HEADER_FILL = "#ffffff"
 PUBLICATION_HEADER_TEXT = "#111111"
-# Geology unit rows the sidebar itself can hold before the overflow block is
-# needed. Kept per template because the Bandung sheet has a wider sidebar.
-SIDEBAR_GEOLOGY_CAPACITY = 6
-SIDEBAR_GEOLOGY_CAPACITY_BANDUNG = 10
-# The overflow block sits *beside* the map, never on top of it, so its width is
-# taken out of the map slot. Larger sheets can spare proportionally more.
-GEOLOGY_OVERFLOW_BLOCK_FRACTION = {
-    "A4 Lanskap": 0.17,
-    "A3 Lanskap": 0.21,
-    "A2 Lanskap": 0.26,
-}
-GEOLOGY_OVERFLOW_MAX_COLUMNS = 4
-# Text shrinks only until it is still legible in print; whatever does not fit
-# by then goes to the PDF index rather than being squeezed further.
-GEOLOGY_OVERFLOW_MIN_FONT_SCALE = 0.62
-GEOLOGY_OVERFLOW_FONT_STEP = 0.06
 OUTPUT_DPI = 144.0
 PUBLICATION_DPI_OPTIONS = {
     "Standar (144 DPI)": OUTPUT_DPI,
@@ -171,21 +142,14 @@ def _publication_layout(
     page_size: str,
     output_dpi: float = OUTPUT_DPI,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
-    overflow_legend_width: int = 0,
 ) -> tuple[
     float,
     int,
     int,
     tuple[int, int, int, int],
     tuple[int, int, int, int],
-    tuple[int, int, int, int] | None,
 ]:
-    """Split the sheet into header, optional overflow legend, map, and sidebar.
-
-    ``overflow_legend_width`` reserves a column on the left edge, before the
-    map, for geology units the sidebar cannot hold. The column takes its width
-    out of the map slot, so the legend never covers map content.
-    """
+    """Split the sheet into header, map, and sidebar."""
     if page_size not in PAGE_SIZES:
         raise PublicationMapError("Ukuran keluaran tidak didukung.")
     page_width, page_height = get_publication_page_size(page_size, output_dpi)
@@ -202,25 +166,17 @@ def _publication_layout(
     sidebar_width = int(page_width * PUBLICATION_TEMPLATES[template_name])
     content_top = header_height + margin
     content_height = page_height - content_top - margin
-    overflow_width = max(0, int(overflow_legend_width))
-    overflow_slot = overflow_width + gutter if overflow_width else 0
-    map_slot_width = page_width - sidebar_width - margin * 2 - gutter - overflow_slot
+    map_slot_width = page_width - sidebar_width - margin * 2 - gutter
     # Reserve a clean white collar for coordinate labels on all four sides.
     # The map image itself stays inside this collar, so the labels never cover
     # earthquake markers or compete with the sidebar.
     coordinate_margin = max(34, int(38 * scale))
-    # The overflow legend claims the left edge, so the map starts after it.
-    map_slot_left = margin + overflow_slot
+    map_slot_left = margin
     map_box = (
         map_slot_left + coordinate_margin,
         content_top + coordinate_margin,
         map_slot_width - coordinate_margin * 2,
         content_height - coordinate_margin * 2,
-    )
-    legend_box = (
-        (margin, content_top, overflow_width, content_height)
-        if overflow_width
-        else None
     )
     sidebar_box = (
         map_slot_left + map_slot_width + gutter,
@@ -228,7 +184,7 @@ def _publication_layout(
         sidebar_width,
         content_height,
     )
-    return scale, header_height, margin, map_box, sidebar_box, legend_box
+    return scale, header_height, margin, map_box, sidebar_box
 
 
 def get_publication_page_size(
@@ -248,177 +204,10 @@ def get_publication_map_size(
     page_size: str,
     output_dpi: float = OUTPUT_DPI,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
-    *,
-    geology_unit_count: int = 0,
-    geology_unit_labels: Collection[str] = (),
 ) -> tuple[int, int]:
-    """Return the map pixels, minus any column reserved for overflow geology.
-
-    Callers that capture a snapshot must pass the same units the render will
-    use - count *and* labels - otherwise the snapshot is sized for a different
-    map slot than the sheet actually has.
-    """
-    overflow = plan_geology_legend_overflow(
-        page_size,
-        output_dpi,
-        template_name,
-        unit_count=geology_unit_count,
-        unit_labels=geology_unit_labels,
-    )
-    _, _, _, map_box, _, _ = _publication_layout(
-        page_size, output_dpi, template_name, overflow.width
-    )
+    """Return the map pixels of the sheet's map slot."""
+    _, _, _, map_box, _ = _publication_layout(page_size, output_dpi, template_name)
     return map_box[2], map_box[3]
-
-
-class GeologyOverflowMetrics(NamedTuple):
-    """Pixel metrics for one geology overflow row at a given font scale."""
-
-    row_height: int
-    column_width: int
-    swatch: int
-    font_size: int
-    padding: int
-
-
-class GeologyOverflowPlan(NamedTuple):
-    """How many geology units fit the block beside the map, and at what size."""
-
-    column_count: int
-    width: int
-    font_scale: float
-    capacity: int
-    overflow_count: int
-    label_width: int | None = None
-
-    @property
-    def is_active(self) -> bool:
-        return self.column_count > 0 and self.capacity > 0
-
-    @property
-    def remainder(self) -> int:
-        """Units that still have to go to the PDF index."""
-        return max(0, self.overflow_count - self.capacity)
-
-
-NO_GEOLOGY_OVERFLOW = GeologyOverflowPlan(0, 0, 1.0, 0, 0)
-
-
-def _sidebar_geology_capacity(template_name: str) -> int:
-    """Geology rows the sidebar legend itself holds before overflowing."""
-    return (
-        SIDEBAR_GEOLOGY_CAPACITY_BANDUNG
-        if template_name == PUBLICATION_TEMPLATE_BANDUNG
-        else SIDEBAR_GEOLOGY_CAPACITY
-    )
-
-
-def _geology_overflow_label_gap(scale: float) -> int:
-    """Gap between a swatch and its label."""
-    return max(4, round(5 * scale))
-
-
-def _geology_overflow_metrics(
-    scale: float,
-    font_scale: float,
-    label_width: int | None = None,
-) -> GeologyOverflowMetrics:
-    """Row metrics at a font scale; ``label_width`` overrides the nominal text
-    width once the real unit names have been measured."""
-    combined = scale * font_scale
-    swatch = max(7, round(11 * combined))
-    text_width = round(150 * combined) if label_width is None else label_width
-    return GeologyOverflowMetrics(
-        row_height=max(11, round(20 * combined)),
-        column_width=max(
-            96,
-            swatch + _geology_overflow_label_gap(scale) + text_width + round(8 * scale),
-        ),
-        swatch=swatch,
-        font_size=max(8, round(13 * combined)),
-        padding=max(6, round(12 * scale)),
-    )
-
-
-def _geology_overflow_label_width(
-    scale: float,
-    font_scale: float,
-    labels: Collection[str],
-    max_width: int,
-    columns: int,
-) -> int | None:
-    """Text width for one column: as wide as the longest name, within budget.
-
-    Returning ``None`` keeps the nominal width, which is what callers that only
-    know the unit count get.
-    """
-    if not labels:
-        return None
-    base = _geology_overflow_metrics(scale, font_scale)
-    chrome = base.swatch + _geology_overflow_label_gap(scale) + round(8 * scale)
-    budget = (max_width - base.padding * 2) // max(1, columns) - chrome
-    font = _font(base.font_size)
-    needed = max(round(font.getlength(str(label))) for label in labels)
-    return max(round(40 * scale * font_scale), min(needed, max(1, budget)))
-
-
-def plan_geology_legend_overflow(
-    page_size: str,
-    output_dpi: float = OUTPUT_DPI,
-    template_name: str = PUBLICATION_TEMPLATE_LEGACY,
-    *,
-    unit_count: int,
-    unit_labels: Collection[str] = (),
-) -> GeologyOverflowPlan:
-    """Size the legend block beside the map for units the sidebar cannot hold.
-
-    Follows the "adjust columns and font size" fitting strategy, but tuned so
-    the map keeps as much width as possible. ``unit_labels`` are the names of
-    every listed unit, in sidebar order; passing them lets the column match the
-    longest name instead of a nominal guess.
-    """
-    sidebar_capacity = _sidebar_geology_capacity(template_name)
-    overflow_labels = [str(label) for label in unit_labels][sidebar_capacity:]
-    overflow_count = max(0, int(unit_count) - sidebar_capacity)
-    if overflow_count <= 0:
-        return NO_GEOLOGY_OVERFLOW
-    scale, _, _, _, sidebar_box, _ = _publication_layout(
-        page_size, output_dpi, template_name
-    )
-    page_width = get_publication_page_size(page_size, output_dpi)[0]
-    max_width = int(page_width * GEOLOGY_OVERFLOW_BLOCK_FRACTION.get(page_size, 0.17))
-    # The block shares the map's vertical band; the heading and the closing note
-    # take a fixed slice off the top and bottom.
-    usable_height = max(1, sidebar_box[3] - round(58 * scale))
-
-    # Every column is taken out of the map, so the narrowest block wins: try one
-    # column at the largest readable size, shrink the text, and only add another
-    # column once the smallest allowed size still cannot hold the units.
-    best = NO_GEOLOGY_OVERFLOW
-    for columns in range(1, GEOLOGY_OVERFLOW_MAX_COLUMNS + 1):
-        font_scale = 1.0
-        while font_scale >= GEOLOGY_OVERFLOW_MIN_FONT_SCALE - 1e-9:
-            label_width = _geology_overflow_label_width(
-                scale, font_scale, overflow_labels, max_width, columns
-            )
-            metrics = _geology_overflow_metrics(scale, font_scale, label_width)
-            width = columns * metrics.column_width + metrics.padding * 2
-            if width <= max_width:
-                rows = max(1, usable_height // metrics.row_height)
-                plan = GeologyOverflowPlan(
-                    column_count=columns,
-                    width=width,
-                    font_scale=font_scale,
-                    capacity=rows * columns,
-                    overflow_count=overflow_count,
-                    label_width=label_width,
-                )
-                if plan.capacity >= overflow_count:
-                    return plan
-                if plan.capacity > best.capacity:
-                    best = plan
-            font_scale -= GEOLOGY_OVERFLOW_FONT_STEP
-    return best
 
 
 def _publication_tile_limit(
@@ -471,8 +260,6 @@ def _sidebar_legend_block_height(
     density_color_count: int = len(POPULATION_DENSITY_COLORS),
     compact: bool = False,
     has_earthquakes: bool = True,
-    show_geology: bool = False,
-    geology_row_count: int = 0,
     hazard_class_count: int = 0,
 ) -> int:
     """Height in pixels from the institution text down to the locator inset.
@@ -484,10 +271,6 @@ def _sidebar_legend_block_height(
     height = institution_block_height  # institution text region -> scale bar
     height += int(36 * scale)  # scale bar region -> "Legenda" heading
     height += int(38 * scale)  # after the "Legenda" heading
-    if show_geology:
-        height += int(25 * scale)
-        height += max(1, geology_row_count) * int((18 if compact else 22) * scale)
-        height += int(18 * scale)
     if show_basemap and basemap_name == BASEMAP_SHORTBREAD and show_basemap_legend:
         height += int(26 * scale)  # land / water swatches
         if show_shortbread_roads or show_shortbread_rivers:
@@ -602,11 +385,6 @@ def capture_filtered_map(
     district_names: Collection[str] | None = None,
     fault_feature_indexes: Collection[int] | None = None,
     basemap_progress_callback: BasemapProgressCallback | None = None,
-    show_geology: bool = False,
-    geology_features: Collection[dict[str, Any]] | None = None,
-    geology_units: Collection[GeologyUnit | dict[str, Any]] = (),
-    selected_geology_keys: Collection[str] | None = None,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     representative_scale_denominator: int | None = None,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
     selection_bounds: tuple[float, float, float, float] | None = None,
@@ -642,7 +420,6 @@ def capture_filtered_map(
         show_basemap_legend=False,
         show_faults=show_faults,
         show_earthquakes=show_earthquakes,
-        geology_features=geology_features,
         show_trenches=show_trenches,
         show_slabs=show_slabs,
         show_stations=show_stations,
@@ -656,10 +433,6 @@ def capture_filtered_map(
         fault_feature_indexes=fault_feature_indexes,
         province_names=province_names,
         district_names=district_names,
-        show_geology=show_geology,
-        geology_units=geology_units,
-        selected_geology_keys=selected_geology_keys,
-        geology_style_mode=geology_style_mode,
         representative_scale_denominator=representative_scale_denominator,
         template_name=template_name,
         source_text="",
@@ -1895,174 +1668,6 @@ def _render_basemap(
     ) from last_error
 
 
-def _web_mercator_meters(longitude: float, latitude: float) -> tuple[float, float]:
-    safe_latitude = max(-85.05112878, min(85.05112878, latitude))
-    x = longitude * 20037508.342789244 / 180.0
-    y = math.log(math.tan((90.0 + safe_latitude) * math.pi / 360.0))
-    return x, y * 20037508.342789244 / math.pi
-
-
-def _geology_admin_mask(
-    size: tuple[int, int],
-    bounds: tuple[float, float, float, float],
-    province_geojson: dict[str, Any] | None,
-    district_geojson: dict[str, Any] | None,
-    province_names: Collection[str] | None,
-    district_names: Collection[str] | None,
-) -> Image.Image | None:
-    selected_districts = set(district_names or [])
-    selected_provinces = set(province_names or [])
-    if selected_districts:
-        source, property_name, selected = district_geojson or {}, "WADMKK", selected_districts
-    elif selected_provinces:
-        source, property_name, selected = province_geojson or {}, "PROVINSI", selected_provinces
-    else:
-        return None
-    mask = Image.new("L", size, 0)
-    mask_draw = ImageDraw.Draw(mask)
-    project = _projector(bounds, 0, (0, 0, size[0], size[1]))
-    for feature in source.get("features", []):
-        if str((feature.get("properties") or {}).get(property_name) or "") not in selected:
-            continue
-        geometry = feature.get("geometry") or {}
-        coordinates = geometry.get("coordinates") or []
-        polygons = [coordinates] if geometry.get("type") == "Polygon" else coordinates
-        for polygon in polygons:
-            if not polygon:
-                continue
-            outer = [project(float(point[0]), float(point[1])) for point in polygon[0]]
-            if len(outer) >= 3:
-                mask_draw.polygon(outer, fill=255)
-            for hole in polygon[1:]:
-                points = [project(float(point[0]), float(point[1])) for point in hole]
-                if len(points) >= 3:
-                    mask_draw.polygon(points, fill=0)
-    return mask
-
-
-def _render_geology_overlay(
-    bounds: tuple[float, float, float, float],
-    size: tuple[int, int],
-    *,
-    geology_units: Collection[GeologyUnit | dict[str, Any]] = (),
-    selected_geology_keys: Collection[str] | None = None,
-    province_geojson: dict[str, Any] | None = None,
-    district_geojson: dict[str, Any] | None = None,
-    province_names: Collection[str] | None = None,
-    district_names: Collection[str] | None = None,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    unit_colors: dict[str, str] | None = None,
-    timeout: float = 45.0,
-) -> Image.Image:
-    """Export styled Layer 8 once and apply an exact local admin alpha mask."""
-    west, south, east, north = bounds
-    xmin, ymin = _web_mercator_meters(west, south)
-    xmax, ymax = _web_mercator_meters(east, north)
-    request_scale = min(1.0, 4096.0 / max(size))
-    request_size = (
-        max(1, round(size[0] * request_scale)),
-        max(1, round(size[1] * request_scale)),
-    )
-    params = {
-        "bbox": f"{xmin},{ymin},{xmax},{ymax}",
-        "bboxSR": "3857",
-        "imageSR": "3857",
-        "layers": "show:8",
-        "size": f"{request_size[0]},{request_size[1]}",
-        "format": "png32",
-        "transparent": "true",
-        "dpi": "96",
-        "dynamicLayers": build_dynamic_layers(
-            geology_units,
-            selected_geology_keys,
-            show_formation_labels=True,
-            formation_label_expression=(
-                "[remark]" if district_names or selected_geology_keys else "[simobj]"
-            ),
-            style_mode=geology_style_mode,
-            unit_colors=unit_colors,
-        ),
-        "f": "image",
-    }
-    request = urllib.request.Request(
-        f"{GEOLOGY_MAPSERVER_URL}/export",
-        data=urllib.parse.urlencode(params).encode("utf-8"),
-        headers={
-            "Content-Type": "application/x-www-form-urlencoded",
-            "User-Agent": "E-QuakeVis/1.0",
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            payload = response.read(25_000_001)
-        if len(payload) > 25_000_000:
-            raise PublicationMapError("Respons raster geologi terlalu besar.")
-        overlay = Image.open(BytesIO(payload)).convert("RGBA")
-    except (OSError, UnidentifiedImageError) as exc:
-        raise PublicationMapError(
-            "Layer geologi publikasi tidak dapat dimuat dari layanan resmi BIG. "
-            "Coba kembali saat layanan tersedia."
-        ) from exc
-    if overlay.size != size:
-        overlay = overlay.resize(size, Image.Resampling.LANCZOS)
-    mask = _geology_admin_mask(
-        size,
-        bounds,
-        province_geojson,
-        district_geojson,
-        province_names,
-        district_names,
-    )
-    if mask is not None:
-        overlay.putalpha(Image.composite(overlay.getchannel("A"), Image.new("L", size, 0), mask))
-    return overlay
-
-
-def _render_geology_vector_overlay(
-    bounds: tuple[float, float, float, float],
-    size: tuple[int, int],
-    *,
-    features: Collection[dict[str, Any]],
-    unit_colors: dict[str, str],
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    scale: float = 1.0,
-    province_geojson: dict[str, Any] | None = None,
-    district_geojson: dict[str, Any] | None = None,
-    province_names: Collection[str] | None = None,
-    district_names: Collection[str] | None = None,
-    show_formation_labels: bool = True,
-) -> Image.Image:
-    """Draw Layer 8 polygons locally instead of asking BIG to render them.
-
-    Same admin clipping as the raster path, so the two sources are
-    interchangeable from the sheet's point of view.
-    """
-    overlay = Image.new("RGBA", size, (0, 0, 0, 0))
-    draw_geology_vector_layer(
-        overlay,
-        features,
-        _projector(bounds, 0, (0, 0, size[0], size[1])),
-        unit_colors=unit_colors,
-        style_mode=geology_style_mode,
-        scale=scale,
-        show_labels=show_formation_labels,
-    )
-    mask = _geology_admin_mask(
-        size,
-        bounds,
-        province_geojson,
-        district_geojson,
-        province_names,
-        district_names,
-    )
-    if mask is not None:
-        overlay.putalpha(
-            Image.composite(overlay.getchannel("A"), Image.new("L", size, 0), mask)
-        )
-    return overlay
-
-
 def _iter_polygon_rings(geometry: dict[str, Any]) -> Iterable[list[list[float]]]:
     geometry_type = geometry.get("type")
     coordinates = geometry.get("coordinates", [])
@@ -3029,9 +2634,6 @@ def _publication_source_lines(
     trench_geojson: dict[str, Any] | None,
     slab_geojson: dict[str, Any] | None,
     population_density_mode: str = "province",
-    show_geology: bool = False,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    geology_rendered_locally: bool = False,
     hazard_source: str | None = None,
 ) -> list[str]:
     """List only sources for data and layers present in the publication map.
@@ -3088,43 +2690,7 @@ def _publication_source_lines(
             "Batas administrasi: GeoJSON 38 Provinsi (© 2024 Ardian Saputra "
             "Hasibuan, MIT); repositori menyebut BIG sebagai sumber awal"
         )
-    if show_geology:
-        lines.append(
-            "Geologi: Pusat Survei Geologi, Badan Geologi, KESDM melalui "
-            "Kebijakan Satu Peta/BIG (Layer 8)"
-        )
-        # Which side drew the polygons changes what the reader is looking at:
-        # a generalised local plot is not the same artefact as the official
-        # server rendering, and saying so is the difference between a credit
-        # and a claim.
-        if geology_rendered_locally:
-            lines.append(
-                "Poligon geologi diunduh dan digambar ulang secara lokal "
-                "(geometri digeneralisasi); bukan keluaran render resmi BIG"
-            )
-        # The palette is ours, derived from the official age colours, so the
-        # credit must not imply BIG published these exact per-unit colours.
-        if geology_style_mode == GEOLOGY_STYLE_OFFICIAL:
-            lines.append(
-                "Warna satuan: disebar per satuan dari palet umur resmi BIG/KSP "
-                "Layer 8, mengikuti USGS TM 11-B1"
-            )
-        elif geology_style_mode == GEOLOGY_STYLE_CGMW:
-            lines.append(
-                "Warna satuan: disebar per satuan dari palet umur CGMW 2022 RGB "
-                "(CMYK adalah referensi cetak utama), mengikuti USGS TM 11-B1"
-            )
-        else:
-            raise ValueError(f"Mode warna geologi tidak dikenal: {geology_style_mode}")
     return lines
-
-
-def _geology_legend_heading(style_mode: str = GEOLOGY_STYLE_OFFICIAL) -> str:
-    if style_mode == GEOLOGY_STYLE_OFFICIAL:
-        return "Geologi — Resmi BIG/KSP"
-    if style_mode == GEOLOGY_STYLE_CGMW:
-        return "Geologi — CGMW 2022 RGB"
-    raise ValueError(f"Mode warna geologi tidak dikenal: {style_mode}")
 
 
 def _draw_population_density_legend(
@@ -3207,348 +2773,8 @@ def _draw_class_legend(
     return legend_y + int(row_count * row_height + (4 if compact else 6) * scale)
 
 
-def _iter_polygons(geometry: dict[str, Any]) -> Iterable[list[list[list[float]]]]:
-    """Yield each polygon as [outer_ring, *holes]."""
-    kind = str(geometry.get("type") or "")
-    coordinates = geometry.get("coordinates") or []
-    if kind == "Polygon":
-        yield [list(ring) for ring in coordinates]
-    elif kind == "MultiPolygon":
-        for polygon in coordinates:
-            yield [list(ring) for ring in polygon]
-
-
-def _ring_area(ring: list[list[float]]) -> float:
-    """Absolute shoelace area of a closed ring."""
-    total = 0.0
-    for index in range(len(ring) - 1):
-        x1, y1 = ring[index][0], ring[index][1]
-        x2, y2 = ring[index + 1][0], ring[index + 1][1]
-        total += x1 * y2 - x2 * y1
-    return abs(total) / 2.0
-
-
-def _polygon_area(rings: list[list[list[float]]]) -> float:
-    if not rings:
-        return 0.0
-    return max(0.0, _ring_area(rings[0]) - sum(_ring_area(hole) for hole in rings[1:]))
-
-
-def _point_in_rings(x: float, y: float, rings: list[list[list[float]]]) -> bool:
-    """Even-odd ray casting across the outer ring and its holes."""
-    inside = False
-    for ring in rings:
-        for index in range(len(ring) - 1):
-            ax, ay = ring[index][0], ring[index][1]
-            bx, by = ring[index + 1][0], ring[index + 1][1]
-            if (ay > y) != (by > y) and x < (bx - ax) * (y - ay) / (by - ay) + ax:
-                inside = not inside
-    return inside
-
-
-def _point_to_segment_distance(
-    px: float, py: float, ax: float, ay: float, bx: float, by: float
-) -> float:
-    dx, dy = bx - ax, by - ay
-    if dx or dy:
-        t = ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)
-        if t > 1:
-            ax, ay = bx, by
-        elif t > 0:
-            ax, ay = ax + dx * t, ay + dy * t
-    return math.hypot(px - ax, py - ay)
-
-
-def _point_to_rings_distance(
-    x: float, y: float, rings: list[list[list[float]]]
-) -> float:
-    """Distance from a point to the polygon edge; negative when outside."""
-    nearest = math.inf
-    for ring in rings:
-        for index in range(len(ring) - 1):
-            nearest = min(
-                nearest,
-                _point_to_segment_distance(
-                    x,
-                    y,
-                    ring[index][0],
-                    ring[index][1],
-                    ring[index + 1][0],
-                    ring[index + 1][1],
-                ),
-            )
-    if nearest is math.inf:
-        return 0.0
-    return nearest if _point_in_rings(x, y, rings) else -nearest
-
-
-def _polylabel(
-    rings: list[list[list[float]]],
-    precision: float = 1.0,
-) -> tuple[float, float, float]:
-    """Pole of inaccessibility: the point furthest inside a polygon.
-
-    A centroid falls outside crescent or forked map units, which puts their
-    label on a neighbouring unit. This walks a priority queue of square cells,
-    splitting the most promising first and pruning the rest, after Mapbox's
-    polylabel. Returns (x, y, radius of the inscribed circle at that point).
-    """
-    outer = rings[0] if rings else []
-    if len(outer) < 4:
-        return (0.0, 0.0, 0.0)
-    xs = [point[0] for point in outer]
-    ys = [point[1] for point in outer]
-    min_x, max_x, min_y, max_y = min(xs), max(xs), min(ys), max(ys)
-    width, height = max_x - min_x, max_y - min_y
-    cell_size = min(width, height)
-    if cell_size <= 0:
-        return (min_x, min_y, 0.0)
-
-    def cell(cx: float, cy: float, half: float) -> tuple[float, float, float, float, float]:
-        distance = _point_to_rings_distance(cx, cy, rings)
-        # Upper bound on any distance inside this cell, used to prune.
-        return (-(distance + half * math.sqrt(2)), cx, cy, half, distance)
-
-    queue: list[tuple[float, float, float, float, float]] = []
-    half = cell_size / 2.0
-    x = min_x
-    while x < max_x:
-        y = min_y
-        while y < max_y:
-            heapq.heappush(queue, cell(x + half, y + half, half))
-            y += cell_size
-        x += cell_size
-
-    best = cell((min_x + max_x) / 2.0, (min_y + max_y) / 2.0, 0.0)
-    while queue:
-        _, cx, cy, cell_half, distance = heapq.heappop(queue)
-        if distance > best[4]:
-            best = (0.0, cx, cy, cell_half, distance)
-        if distance + cell_half * math.sqrt(2) - best[4] <= precision:
-            continue
-        child = cell_half / 2.0
-        for offset_x, offset_y in ((-child, -child), (child, -child), (-child, child), (child, child)):
-            heapq.heappush(queue, cell(cx + offset_x, cy + offset_y, child))
-    return (best[1], best[2], max(0.0, best[4]))
-
-
 _LABEL_CANDIDATE_GRID = 7
 _LABEL_CANDIDATE_LIMIT = 12
-
-
-def _label_anchor_candidates(
-    rings: list[list[list[float]]],
-    precision: float = 1.0,
-) -> list[tuple[float, float, float]]:
-    """Label anchors for one polygon, roomiest first.
-
-    The pole of inaccessibility comes first, but it can sit under a unit drawn
-    on top of this one. Fallback anchors are sampled on a coarse grid and
-    ranked by how much room they have, so a large formation still gets a label
-    somewhere in its uncovered part instead of losing it entirely.
-    """
-    candidates = [_polylabel(rings, precision)]
-    outer = rings[0] if rings else []
-    if len(outer) < 4:
-        return [candidate for candidate in candidates if candidate[2] > 0]
-    xs = [point[0] for point in outer]
-    ys = [point[1] for point in outer]
-    min_x, max_x, min_y, max_y = min(xs), max(xs), min(ys), max(ys)
-    step_x = (max_x - min_x) / (_LABEL_CANDIDATE_GRID + 1)
-    step_y = (max_y - min_y) / (_LABEL_CANDIDATE_GRID + 1)
-    sampled: list[tuple[float, float, float]] = []
-    for row in range(1, _LABEL_CANDIDATE_GRID + 1):
-        for column in range(1, _LABEL_CANDIDATE_GRID + 1):
-            x = min_x + column * step_x
-            y = min_y + row * step_y
-            distance = _point_to_rings_distance(x, y, rings)
-            if distance > 0:
-                sampled.append((x, y, distance))
-    sampled.sort(key=lambda candidate: candidate[2], reverse=True)
-    candidates.extend(sampled[:_LABEL_CANDIDATE_LIMIT])
-    return [candidate for candidate in candidates if candidate[2] > 0]
-
-
-def _boxes_overlap(
-    first: tuple[float, float, float, float],
-    second: tuple[float, float, float, float],
-) -> bool:
-    return not (
-        first[2] <= second[0]
-        or second[2] <= first[0]
-        or first[3] <= second[1]
-        or second[3] <= first[1]
-    )
-
-
-def _polygon_mask(
-    rings: list[list[tuple[float, float]]],
-) -> tuple[Image.Image, tuple[int, int]] | None:
-    """Build an alpha mask for one polygon, with its holes cut out.
-
-    Pillow has no even-odd fill, so a hole drawn as another filled ring would
-    bury whatever lies beneath it. A mask keeps holes genuinely transparent.
-    """
-    outer = rings[0]
-    xs = [point[0] for point in outer]
-    ys = [point[1] for point in outer]
-    left, top = int(math.floor(min(xs))), int(math.floor(min(ys)))
-    right, bottom = int(math.ceil(max(xs))), int(math.ceil(max(ys)))
-    width, height = right - left, bottom - top
-    if width <= 0 or height <= 0:
-        return None
-    mask = Image.new("L", (width, height), 0)
-    mask_draw = ImageDraw.Draw(mask)
-    mask_draw.polygon([(x - left, y - top) for x, y in outer], fill=255)
-    for hole in rings[1:]:
-        if len(hole) >= 3:
-            mask_draw.polygon([(x - left, y - top) for x, y in hole], fill=0)
-    return mask, (left, top)
-
-
-def draw_geology_vector_layer(
-    target: Image.Image,
-    features: Collection[dict[str, Any]],
-    project: Callable[[float, float], tuple[float, float]],
-    *,
-    unit_colors: dict[str, str],
-    style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    scale: float = 1.0,
-    show_labels: bool = True,
-    label_font_size: int | None = None,
-) -> int:
-    """Draw geology polygons locally and label them; returns labels placed.
-
-    Overlap is resolved by area: the largest units are painted first and the
-    smallest last, so a small intrusion is never buried by the formation
-    around it. Labels are then placed greatest-area-first at each polygon's
-    pole of inaccessibility, and a label is dropped when it will not fit
-    inside its own polygon or would collide with one already placed - a label
-    sitting on the wrong unit is worse than no label.
-    """
-    records: list[tuple[float, list[list[tuple[float, float]]], GeologyUnit]] = []
-    for feature in features:
-        unit = _normalize_geology_units([feature.get("properties") or {}])[0]
-        for polygon in _iter_polygons(feature.get("geometry") or {}):
-            projected = [
-                [project(float(point[0]), float(point[1])) for point in ring]
-                for ring in polygon
-                if len(ring) >= 4
-            ]
-            if not projected:
-                continue
-            area = _polygon_area([[list(point) for point in ring] for ring in projected])
-            if area <= 0:
-                continue
-            records.append((area, projected, unit))
-
-    records.sort(key=lambda record: record[0], reverse=True)
-    outline_width = max(1, round(0.7 * scale))
-    outline_draw = ImageDraw.Draw(target)
-    # An identity raster records which unit actually ends up visible in each
-    # pixel. Ring geometry alone cannot answer that: a formation's own centre
-    # may be buried under the intrusion drawn on top of it, and a label placed
-    # there would name the wrong unit.
-    id_map = Image.new("I", target.size, -1)
-    for index, (_, rings, unit) in enumerate(records):
-        built = _polygon_mask(rings)
-        if built is None:
-            continue
-        mask, origin = built
-        target.paste(
-            Image.new("RGBA", mask.size, _geology_unit_hex(unit, unit_colors, style_mode)),
-            origin,
-            mask,
-        )
-        id_map.paste(index, origin, mask)
-        if outline_width > 0:
-            outline_draw.line(
-                [*rings[0], rings[0][0]],
-                fill="#4b5563",
-                width=outline_width,
-                joint="curve",
-            )
-
-    if not show_labels:
-        return 0
-
-    font = _font(label_font_size or max(9, round(11 * scale)), bold=True)
-    label_draw = ImageDraw.Draw(target)
-    placed: list[tuple[float, float, float, float]] = []
-    padding = max(2, round(3 * scale))
-    width, height = target.size
-    # Smallest first: the unit on top has the strongest claim to the space a
-    # reader sees, and a large formation can still take whatever is left.
-    for index in range(len(records) - 1, -1, -1):
-        _, rings, unit = records[index]
-        text = unit.symbol or unit.name_id or unit.name_en
-        if not text:
-            continue
-        as_lists = [[list(point) for point in ring] for ring in rings]
-        for anchor_x, anchor_y, radius in _label_anchor_candidates(
-            as_lists, precision=max(1.0, scale)
-        ):
-            left, top, right, bottom = label_draw.textbbox(
-                (anchor_x, anchor_y), text, font=font, anchor="mm"
-            )
-            if max(right - left, bottom - top) / 2.0 > radius:
-                continue
-            box = (left - padding, top - padding, right + padding, bottom + padding)
-            if box[0] < 0 or box[1] < 0 or box[2] > width or box[3] > height:
-                continue
-            # Every pixel the label covers must still belong to this unit.
-            patch = id_map.crop((int(box[0]), int(box[1]), int(box[2]), int(box[3])))
-            lowest, highest = patch.getextrema()
-            if lowest != index or highest != index:
-                continue
-            if any(_boxes_overlap(box, other) for other in placed):
-                continue
-            placed.append(box)
-            label_draw.text(
-                (anchor_x, anchor_y),
-                text,
-                font=font,
-                fill="#232323",
-                anchor="mm",
-                stroke_width=max(1, round(1.2 * scale)),
-                stroke_fill="#ffffff",
-            )
-            break
-    return len(placed)
-
-
-def _geology_unit_hex(
-    unit: GeologyUnit,
-    unit_colors: dict[str, str],
-    style_mode: str,
-) -> str:
-    """Colour for one unit, falling back to its age colour when uncatalogued."""
-    return (
-        unit_colors.get(geology_render_key(unit))
-        or get_geology_age_style(unit.age, style_mode).hex
-    )
-
-
-def _normalize_geology_units(
-    units: Collection[GeologyUnit | dict[str, Any]],
-) -> list[GeologyUnit]:
-    """Accept either catalog objects or raw MapServer dictionaries."""
-    normalized: list[GeologyUnit] = []
-    for unit in units:
-        if isinstance(unit, GeologyUnit):
-            normalized.append(unit)
-            continue
-        normalized.append(
-            GeologyUnit(
-                key=str(unit.get("key") or ""),
-                symbol=str(unit.get("symbol") or unit.get("simobj") or ""),
-                name_en=str(unit.get("name_en") or unit.get("namobj") or ""),
-                age=str(unit.get("age") or unit.get("umurobj") or ""),
-                name_id=str(unit.get("name_id") or unit.get("remark") or ""),
-                feature_count=int(unit.get("feature_count") or 0),
-            )
-        )
-    return normalized
 
 
 def _fitted_font(
@@ -3567,88 +2793,6 @@ def _fitted_font(
             return font
         size -= 1
     return _font(minimum, bold=bold)
-
-
-def _draw_geology_overflow_block(
-    draw: ImageDraw.ImageDraw,
-    box: tuple[int, int, int, int],
-    units: Collection[GeologyUnit],
-    plan: GeologyOverflowPlan,
-    scale: float,
-    *,
-    style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    remainder: int = 0,
-    unit_colors: dict[str, str] | None = None,
-) -> None:
-    """Draw the geology units that overflow the sidebar, in the column beside
-    the map. The column has its own layout slot, so nothing here overlaps the
-    map image."""
-    block_x, block_y, block_width, block_height = box
-    metrics = _geology_overflow_metrics(scale, plan.font_scale, plan.label_width)
-    draw.rectangle(
-        (block_x, block_y, block_x + block_width, block_y + block_height),
-        fill="#ffffff",
-        outline="#111111",
-        width=max(1, round(1.5 * scale)),
-    )
-    inner_width = block_width - metrics.padding * 2
-    note = (
-        f"+{remainder} unit lain pada indeks PDF lanjutan"
-        if remainder
-        else "Tiap satuan berwarna sendiri, dalam keluarga warna umurnya"
-    )
-    # The block is only as wide as the map can spare, so its heading and note
-    # shrink to that width rather than spilling over the sidebar.
-    heading_font = _fitted_font(
-        draw, "LANJUTAN SATUAN GEOLOGI", inner_width, max(11, round(15 * scale)), bold=True
-    )
-    entry_font = _font(metrics.font_size)
-    note_font = _fitted_font(draw, note, inner_width, max(8, round(11 * scale)))
-    inner_x = block_x + metrics.padding
-    heading_y = block_y + metrics.padding
-    draw.text(
-        (inner_x, heading_y),
-        "LANJUTAN SATUAN GEOLOGI",
-        font=heading_font,
-        fill="#111827",
-    )
-    rows_top = heading_y + round(26 * scale)
-    note_height = round(20 * scale)
-    rows_available = max(
-        1,
-        (block_y + block_height - metrics.padding - note_height - rows_top)
-        // metrics.row_height,
-    )
-    label_width = max(
-        20,
-        metrics.column_width - metrics.swatch - round(14 * scale),
-    )
-    for index, unit in enumerate(list(units)[: rows_available * plan.column_count]):
-        column = index // rows_available
-        row = index % rows_available
-        entry_x = inner_x + column * metrics.column_width
-        entry_y = rows_top + row * metrics.row_height
-        draw.rectangle(
-            (entry_x, entry_y, entry_x + metrics.swatch, entry_y + metrics.swatch),
-            fill=_geology_unit_hex(unit, unit_colors or {}, style_mode),
-            outline="#4b5563",
-            width=1,
-        )
-        draw.text(
-            (
-                entry_x + metrics.swatch + max(4, round(5 * scale)),
-                entry_y - max(1, round(2 * scale)),
-            ),
-            _ellipsize_text(draw, unit.display_name, entry_font, label_width),
-            font=entry_font,
-            fill="#111827",
-        )
-    draw.text(
-        (inner_x, block_y + block_height - metrics.padding - note_height),
-        _ellipsize_text(draw, note, note_font, inner_width),
-        font=note_font,
-        fill="#4b5563",
-    )
 
 
 RTRW_PROJECTION_ROWS = (
@@ -3913,214 +3057,6 @@ def _load_logo(logo_bytes: bytes | None, max_size: tuple[int, int]) -> Image.Ima
     return logo
 
 
-def _geology_age_legend_page(
-    page_pixels: tuple[int, int],
-    output_dpi: float,
-    style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-) -> Image.Image:
-    width, height = page_pixels
-    physical_scale = output_dpi / OUTPUT_DPI
-    margin = max(30, int(46 * physical_scale))
-    header_height = max(70, int(105 * physical_scale))
-    page = Image.new("RGB", page_pixels, "#ffffff")
-    draw = ImageDraw.Draw(page, "RGBA")
-    title_font = _font(max(22, int(30 * physical_scale)), bold=True)
-    label_font = _font(max(12, int(17 * physical_scale)), bold=True)
-    detail_font = _font(max(10, int(12 * physical_scale)))
-    draw.rectangle((0, 0, width, header_height), fill=PUBLICATION_HEADER_FILL)
-    draw.line(
-        (margin, header_height - 2, width - margin, header_height - 2),
-        fill="#111111",
-        width=max(1, int(1.5 * physical_scale)),
-    )
-    draw.text(
-        (margin, header_height // 2),
-        f"LEGENDA UMUR GEOLOGI — {style_mode.upper()}",
-        font=title_font,
-        fill=PUBLICATION_HEADER_TEXT,
-        anchor="lm",
-    )
-    entries = geology_age_legend(style_mode)
-    columns = 3 if width > height else 2
-    column_width = (width - margin * 2) // columns
-    rows = math.ceil(len(entries) / columns)
-    row_height = max(34, (height - header_height - margin * 2) // max(1, rows))
-    swatch = max(18, int(24 * physical_scale))
-    for index, (label, color) in enumerate(entries):
-        column = index // rows
-        row = index % rows
-        x = margin + column * column_width
-        y = header_height + margin + row * row_height
-        draw.rectangle(
-            (x, y, x + swatch, y + swatch),
-            fill=color,
-            outline="#374151",
-            width=1,
-        )
-        draw.text(
-            (x + swatch + int(9 * physical_scale), y),
-            label,
-            font=label_font,
-            fill="#111827",
-        )
-    draw.text(
-        (margin, height - margin // 2),
-        "Warna menunjukkan umur batuan; nama/sandi menunjukkan unit atau formasi. Formasi berbeda dengan umur sama menggunakan warna yang sama.",
-        font=detail_font,
-        fill="#374151",
-        anchor="ls",
-    )
-    return page
-
-
-def _geology_legend_pages(
-    page_pixels: tuple[int, int],
-    output_dpi: float,
-    geology_units: Collection[GeologyUnit | dict[str, Any]],
-    selected_keys: Collection[str] | None,
-    *,
-    fallback_to_age_legend: bool = True,
-    style_mode: str = GEOLOGY_STYLE_OFFICIAL,
-    unit_colors: dict[str, str] | None = None,
-) -> list[Image.Image]:
-    selected = set(selected_keys or [])
-    units: list[GeologyUnit] = []
-    for value in geology_units:
-        unit = value if isinstance(value, GeologyUnit) else GeologyUnit(
-            key=str(value.get("key") or ""),
-            symbol=str(value.get("symbol") or value.get("simobj") or ""),
-            name_en=str(value.get("name_en") or value.get("namobj") or ""),
-            age=str(value.get("age") or value.get("umurobj") or ""),
-            name_id=str(value.get("name_id") or value.get("remark") or ""),
-            feature_count=int(value.get("feature_count") or 0),
-        )
-        if not selected or unit.key in selected:
-            units.append(unit)
-    if not units:
-        return (
-            [_geology_age_legend_page(page_pixels, output_dpi, style_mode)]
-            if fallback_to_age_legend
-            else []
-        )
-    units.sort(key=lambda unit: (unit.age, unit.symbol, unit.name_id, unit.key))
-    width, height = page_pixels
-    physical_scale = output_dpi / OUTPUT_DPI
-    margin = max(30, int(46 * physical_scale))
-    header_height = max(70, int(105 * physical_scale))
-    columns = 3 if width > height else 2
-    gutter = max(18, int(24 * physical_scale))
-    column_width = (width - margin * 2 - gutter * (columns - 1)) // columns
-    row_height = max(70, int(82 * physical_scale))
-    rows_per_column = max(1, (height - header_height - margin * 2) // row_height)
-    per_page = rows_per_column * columns
-    pages: list[Image.Image] = []
-    total_pages = math.ceil(len(units) / per_page)
-    title_font = _font(max(22, int(30 * physical_scale)), bold=True)
-    name_font = _font(max(12, int(15 * physical_scale)), bold=True)
-    detail_font = _font(max(10, int(12 * physical_scale)))
-    for page_index in range(total_pages):
-        page = Image.new("RGB", page_pixels, "#ffffff")
-        page_draw = ImageDraw.Draw(page, "RGBA")
-        page_draw.rectangle((0, 0, width, header_height), fill=PUBLICATION_HEADER_FILL)
-        page_draw.line(
-            (margin, header_height - 2, width - margin, header_height - 2),
-            fill="#111111",
-            width=max(1, int(1.5 * physical_scale)),
-        )
-        page_draw.text(
-            (margin, header_height // 2),
-            f"INDEKS UNIT/FORMASI GEOLOGI — {page_index + 1}/{total_pages}",
-            font=title_font,
-            fill=PUBLICATION_HEADER_TEXT,
-            anchor="lm",
-        )
-        batch = units[page_index * per_page : (page_index + 1) * per_page]
-        for offset, unit in enumerate(batch):
-            column = offset // rows_per_column
-            row = offset % rows_per_column
-            x = margin + column * (column_width + gutter)
-            y = header_height + margin + row * row_height
-            style = get_geology_age_style(unit.age, style_mode)
-            swatch = max(12, int(16 * physical_scale))
-            page_draw.rectangle(
-                (x, y, x + swatch, y + swatch),
-                fill=_geology_unit_hex(unit, unit_colors or {}, style_mode),
-                outline="#374151",
-                width=1,
-            )
-            text_x = x + swatch + max(6, int(8 * physical_scale))
-            title = unit.display_name
-            if len(title) > 48:
-                title = title[:45] + "…"
-            page_draw.text((text_x, y - 2), title, font=name_font, fill="#111827")
-            detail_y = y + max(17, int(19 * physical_scale))
-            detail = f"Umur sumber: {unit.age or 'tidak tersedia'} · {style.display_name}"
-            page_draw.text((text_x, detail_y), detail, font=detail_font, fill="#374151")
-            description = unit.description
-            wrapped = textwrap.wrap(description, width=max(28, int(column_width / max(6, 6.5 * physical_scale))))[:2]
-            for line_index, line in enumerate(wrapped):
-                page_draw.text(
-                    (text_x, detail_y + max(15, int(16 * physical_scale)) * (line_index + 1)),
-                    line,
-                    font=detail_font,
-                    fill="#4b5563",
-                )
-        page_draw.text(
-            (margin, height - margin // 2),
-            f"Tiap satuan berwarna sendiri, disebar di dalam keluarga warna umurnya ({style_mode}); nama/sandi = unit atau formasi.",
-            font=detail_font,
-            fill="#374151",
-            anchor="ls",
-        )
-        # Keep the page in RGB. Palette mode looks like the smaller option, but
-        # Pillow writes "P" images into PDF with ASCIIHexDecode - uncompressed,
-        # two hex characters per byte - while "RGB" goes through DCTDecode.
-        # At A2/300 DPI that is 67 MB per page instead of 1,1 MB.
-        pages.append(page)
-    return pages
-
-
-def _resolve_geology_legend_catalog(
-    geology_units: Collection[GeologyUnit | dict[str, Any]],
-    geology_legend_units: Collection[GeologyUnit | dict[str, Any]] | None,
-    *,
-    catalog_known: bool | None,
-) -> tuple[tuple[GeologyUnit | dict[str, Any], ...], bool]:
-    """Keep an unknown regional catalog distinct from province-wide units."""
-    if catalog_known is False:
-        return (), False
-    if catalog_known is True:
-        return tuple(geology_legend_units or ()), True
-    if geology_legend_units is not None:
-        return tuple(geology_legend_units), True
-    return tuple(geology_units), False
-
-
-def list_visible_geology_units(
-    geology_units: Collection[GeologyUnit | dict[str, Any]],
-    geology_legend_units: Collection[GeologyUnit | dict[str, Any]] | None = None,
-    *,
-    catalog_known: bool | None = None,
-    selected_geology_keys: Collection[str] | None = None,
-) -> list[GeologyUnit]:
-    """The units the sheet will list, in the order the legend shows them.
-
-    Callers that capture a snapshot need the same list the render derives, so
-    both sides reserve an identically wide map slot.
-    """
-    effective, _ = _resolve_geology_legend_catalog(
-        geology_units,
-        geology_legend_units,
-        catalog_known=catalog_known,
-    )
-    selected = set(selected_geology_keys or [])
-    return [
-        unit
-        for unit in _normalize_geology_units(effective)
-        if not selected or unit.key in selected
-    ]
-
-
 def render_publication_map(
     df: pd.DataFrame,
     fault_geojson: dict[str, Any],
@@ -4166,77 +3102,18 @@ def render_publication_map(
     _map_only_size: tuple[int, int] | None = None,
     basemap_progress_callback: BasemapProgressCallback | None = None,
     map_type_label: str = "",
-    show_geology: bool = False,
-    geology_features: Collection[dict[str, Any]] | None = None,
-    geology_units: Collection[GeologyUnit | dict[str, Any]] = (),
-    geology_legend_units: Collection[GeologyUnit | dict[str, Any]] | None = None,
-    geology_legend_catalog_known: bool | None = None,
-    selected_geology_keys: Collection[str] | None = None,
-    geology_style_mode: str = GEOLOGY_STYLE_OFFICIAL,
     representative_scale_denominator: int | None = None,
     template_name: str = PUBLICATION_TEMPLATE_LEGACY,
     selection_bounds: tuple[float, float, float, float] | None = None,
 ) -> tuple[bytes, bytes]:
     page_pixels = get_publication_page_size(page_size, output_dpi)
-    effective_geology_units, has_effective_geology_catalog = (
-        _resolve_geology_legend_catalog(
-            geology_units,
-            geology_legend_units,
-            catalog_known=geology_legend_catalog_known,
-        )
-    )
-    normalized_geology_units = _normalize_geology_units(effective_geology_units)
-    # One colour assignment shared by the map renderer and every legend. It is
-    # built from the union of both catalogs and from the *whole* catalog rather
-    # than the current selection, so a unit keeps its colour when the user
-    # filters and the legend can never disagree with the map.
-    geology_unit_colors = (
-        build_geology_unit_colors(
-            [*_normalize_geology_units(geology_units), *normalized_geology_units],
-            geology_style_mode,
-        )
-        if show_geology
-        else {}
-    )
-    selected_geology_key_set = set(selected_geology_keys or [])
-    visible_geology_units = [
-        unit
-        for unit in normalized_geology_units
-        if not selected_geology_key_set or unit.key in selected_geology_key_set
-    ]
-    # Sizing the overflow column has to happen before the layout, because the
-    # column takes its width out of the map slot.
-    geology_overflow = (
-        plan_geology_legend_overflow(
-            page_size,
-            output_dpi,
-            template_name,
-            unit_count=len(visible_geology_units),
-            unit_labels=[unit.display_name for unit in visible_geology_units],
-        )
-        if show_geology and _map_only_size is None
-        else NO_GEOLOGY_OVERFLOW
-    )
     # Turning the layer off hides the markers *and* the magnitude/depth keys, and
     # stops the epicentres from framing the view.
     has_earthquakes = show_earthquakes and not df.empty
-    geology_region_bounds = (
-        _region_bounds(
-            province_geojson,
-            district_geojson,
-            province_names,
-            district_names,
-            padding_percent,
-        )
-        if show_geology and (province_names or district_names)
-        else None
-    )
     if selection_bounds is not None:
         # A box drawn on the distribution map is an explicit area of interest,
         # so it frames the sheet even when the points inside it are sparse.
         base_bounds = _selection_frame_bounds(selection_bounds, padding_percent)
-    elif geology_region_bounds is not None:
-        base_bounds = geology_region_bounds
     elif has_earthquakes:
         base_bounds = _map_bounds(df, padding_percent)
     else:
@@ -4261,13 +3138,10 @@ def render_publication_map(
 
     if _map_only_size is None:
         page_width, page_height = page_pixels
-        scale, header_height, margin, map_box, sidebar_box, legend_box = (
-            _publication_layout(
-                page_size,
-                output_dpi,
-                template_name,
-                geology_overflow.width,
-            )
+        scale, header_height, margin, map_box, sidebar_box = _publication_layout(
+            page_size,
+            output_dpi,
+            template_name,
         )
     else:
         page_width, page_height = _map_only_size
@@ -4276,7 +3150,6 @@ def render_publication_map(
         margin = 0
         map_box = (0, 0, page_width, page_height)
         sidebar_box = (page_width, 0, 0, 0)
-        legend_box = None
     max_tile_count = _publication_tile_limit(
         output_dpi,
         map_size=(map_box[2], map_box[3]),
@@ -4380,35 +3253,6 @@ def render_publication_map(
         )
         attribution = "Basemap dinonaktifkan"
         zoom = _choose_zoom(bounds, map_box[2], map_box[3], max_tile_count)
-
-    if show_geology and map_snapshot_bytes is None and geology_features:
-        geology_overlay = _render_geology_vector_overlay(
-            bounds,
-            (map_box[2], map_box[3]),
-            features=geology_features,
-            unit_colors=geology_unit_colors,
-            geology_style_mode=geology_style_mode,
-            scale=scale,
-            province_geojson=province_geojson,
-            district_geojson=district_geojson,
-            province_names=province_names,
-            district_names=district_names,
-        )
-        canvas.paste(geology_overlay, (map_box[0], map_box[1]), geology_overlay)
-    elif show_geology and map_snapshot_bytes is None:
-        geology_overlay = _render_geology_overlay(
-            bounds,
-            (map_box[2], map_box[3]),
-            geology_units=geology_units,
-            selected_geology_keys=selected_geology_keys,
-            province_geojson=province_geojson,
-            district_geojson=district_geojson,
-            province_names=province_names,
-            district_names=district_names,
-            geology_style_mode=geology_style_mode,
-            unit_colors=geology_unit_colors,
-        )
-        canvas.paste(geology_overlay, (map_box[0], map_box[1]), geology_overlay)
 
     if map_snapshot_bytes is None:
         overlay = Image.new("RGBA", (map_box[2], map_box[3]), (0, 0, 0, 0))
@@ -4674,24 +3518,6 @@ def render_publication_map(
         ),
     )
 
-    sidebar_geology_capacity = _sidebar_geology_capacity(template_name)
-    geology_overflow_units = (
-        visible_geology_units[sidebar_geology_capacity:]
-        if show_geology and geology_overflow.is_active
-        else []
-    )
-    if legend_box is not None and geology_overflow_units:
-        _draw_geology_overflow_block(
-            draw,
-            legend_box,
-            geology_overflow_units,
-            geology_overflow,
-            scale,
-            style_mode=geology_style_mode,
-            remainder=geology_overflow.remainder,
-            unit_colors=geology_unit_colors,
-        )
-
     side_x, side_y, side_width, side_height = sidebar_box
     draw.rectangle(
         (side_x, side_y, side_x + side_width, side_y + side_height),
@@ -4768,8 +3594,6 @@ def render_publication_map(
         density_color_count=len(population_density_colors),
         hazard_class_count=len(hazard_layer.colors) if hazard_layer else 0,
         has_earthquakes=has_earthquakes,
-        show_geology=show_geology,
-        geology_row_count=min(6, len(selected_geology_keys or []) or 6),
     )
     compact_legends = _should_compact_sidebar_legends(
         side_y=side_y,
@@ -4803,8 +3627,6 @@ def render_publication_map(
             hazard_class_count=len(hazard_layer.colors) if hazard_layer else 0,
             compact=True,
             has_earthquakes=has_earthquakes,
-            show_geology=show_geology,
-            geology_row_count=min(6, len(selected_geology_keys or []) or 6),
         )
         if compact_legends
         else normal_legend_block
@@ -4928,6 +3750,9 @@ def render_publication_map(
     heading_font = _font(max(20, int(26 * scale)), bold=True)
     label_font = _font(max(15, int(18 * scale)))
     small_font = _font(max(13, int(15 * scale)))
+    # Compact legends (see _should_compact_sidebar_legends) use smaller text.
+    compact_label_font = _font(max(13, int(15 * scale)))
+    compact_small_font = _font(max(11, int(13 * scale)))
     if template_name == PUBLICATION_TEMPLATE_BANDUNG:
         bandung_heading = _serif_font(max(18, int(23 * scale)), bold=True)
         bandung_subheading = _serif_font(
@@ -5048,104 +3873,6 @@ def render_publication_map(
                 fill="#111827",
             )
             legend_y += int(26 * scale)
-    if show_geology:
-        if template_name != PUBLICATION_TEMPLATE_BANDUNG:
-            draw.text(
-                (side_x + int(24 * scale), legend_y),
-                _geology_legend_heading(geology_style_mode),
-                font=compact_label_font if compact_legends else label_font,
-                fill="#111827",
-            )
-            legend_y += int(25 * scale)
-        visible_units = visible_geology_units
-        row_height = int((18 if compact_legends else 22) * scale)
-        swatch_size = max(9, int((11 if compact_legends else 14) * scale))
-        max_geology_entries = sidebar_geology_capacity
-        if visible_units:
-            entries = [
-                (
-                    unit.display_name,
-                    _geology_unit_hex(unit, geology_unit_colors, geology_style_mode),
-                )
-                for unit in visible_units[:max_geology_entries]
-            ]
-        else:
-            entries = (
-                []
-                if has_effective_geology_catalog
-                else list(geology_age_legend(geology_style_mode)[:max_geology_entries])
-            )
-        geology_font = compact_small_font if compact_legends else small_font
-        bandung_columns = 2 if template_name == PUBLICATION_TEMPLATE_BANDUNG else 1
-        rows_per_column = math.ceil(len(entries) / bandung_columns) if entries else 0
-        entry_width = (side_width - int(48 * scale)) // bandung_columns
-        entries_top = legend_y
-        for entry_index, (label, color) in enumerate(entries):
-            column = entry_index // rows_per_column if rows_per_column else 0
-            row = entry_index % rows_per_column if rows_per_column else 0
-            entry_x = side_x + int(24 * scale) + column * entry_width
-            entry_y = entries_top + row * row_height
-            draw.rectangle(
-                (entry_x, entry_y,
-                 entry_x + swatch_size, entry_y + swatch_size),
-                fill=color,
-                outline="#4b5563",
-                width=1,
-            )
-            clipped_label = _ellipsize_text(
-                draw,
-                label,
-                geology_font,
-                max(
-                    20,
-                    entry_width - swatch_size - int(12 * scale),
-                ),
-            )
-            draw.text(
-                (entry_x + swatch_size + int(7 * scale), entry_y - int(2 * scale)),
-                clipped_label,
-                font=geology_font,
-                fill="#111827",
-            )
-        if entries:
-            legend_y = entries_top + rows_per_column * row_height
-        remaining = max(
-            0,
-            (
-                len(visible_units)
-                if visible_units or has_effective_geology_catalog
-                else len(geology_age_legend(geology_style_mode))
-            )
-            - len(entries),
-        )
-        if remaining:
-            if not visible_units:
-                overflow_note = f"+{remaining} kelas umur pada legenda PDF lanjutan"
-            elif geology_overflow.is_active:
-                overflow_note = (
-                    f"+{remaining} unit pada blok legenda di samping peta"
-                )
-            else:
-                overflow_note = f"+{remaining} unit pada indeks PDF lanjutan"
-            draw.text(
-                (side_x + int(24 * scale), legend_y),
-                overflow_note,
-                font=compact_small_font,
-                fill="#4b5563",
-            )
-        else:
-            draw.text(
-                (side_x + int(24 * scale), legend_y),
-                (
-                    "Tidak ada unit geologi pada wilayah/filter aktif"
-                    if has_effective_geology_catalog and not visible_units
-                    else "Tiap satuan berwarna sendiri, dalam keluarga warna umurnya"
-                ),
-                font=compact_small_font,
-                fill="#4b5563",
-            )
-        legend_y += int(18 * scale)
-
     tectonic_entries: list[str] = []
     if show_trenches and trench_geojson is not None:
         tectonic_entries.append("Tunjaman")
@@ -5333,13 +4060,10 @@ def render_publication_map(
         trench_geojson=trench_geojson,
         slab_geojson=slab_geojson,
         population_density_mode="district" if district_names else "province",
-        show_geology=show_geology,
-        geology_style_mode=geology_style_mode,
-        geology_rendered_locally=bool(geology_features),
         hazard_source=hazard_layer.source if hazard_layer else None,
     )
     # The block has to grow with the credits it carries; a fixed height silently
-    # clipped the last source once the geology lines were added. Counting source
+    # clips the last source when many layers are credited. Counting source
     # lines is not enough either - most of them wrap to two rendered lines - so
     # the wrap is measured against the real column width.
     source_font = _font(max(12, int(13 * scale)))
@@ -5410,30 +4134,9 @@ def render_publication_map(
         dpi=(float(output_dpi), float(output_dpi)),
     )
     pdf_buffer = BytesIO()
-    # Only the units neither the sidebar nor the block beside the map could
-    # show still need an index page, so a sheet that fits everything now
-    # produces a single-page PDF.
-    geology_index_units = visible_geology_units[
-        sidebar_geology_capacity + geology_overflow.capacity :
-    ]
-    appendix_pages = (
-        _geology_legend_pages(
-            (page_width, page_height),
-            output_dpi,
-            geology_index_units,
-            None,
-            fallback_to_age_legend=not has_effective_geology_catalog,
-            style_mode=geology_style_mode,
-            unit_colors=geology_unit_colors,
-        )
-        if show_geology and (geology_index_units or not has_effective_geology_catalog)
-        else []
-    )
     canvas.save(
         pdf_buffer,
         format="PDF",
         resolution=output_dpi,
-        save_all=bool(appendix_pages),
-        append_images=appendix_pages,
     )
     return png_buffer.getvalue(), pdf_buffer.getvalue()
