@@ -47,3 +47,7 @@ data/psha/source_models/
 # USGS global Vs30 (610 MB) and its Indonesian crop: scripts/prepare_usgs_vs30.py.
 data/vs30/download/
 data/vs30/*.npz
+
+# Local working files: zipped PSHA data and the thesis report drafts.
+data/psha.zip
+laporan/

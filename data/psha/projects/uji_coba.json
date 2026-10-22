@@ -2,7 +2,7 @@
   "id": "uji_coba",
   "name": "uji_coba",
   "created_utc": "2026-10-12T17:38:09+00:00",
-  "updated_utc": "2026-10-12T17:38:51+00:00",
+  "updated_utc": "2026-10-16T13:39:59+00:00",
   "region": {
     "provinces": [
       "Jawa Barat"
@@ -10,8 +10,9 @@
     "kabupaten": [
       "Sukabumi"
     ],
-    "spacing": 0.1,
-    "vs30": 760.0
+    "spacing": 0.01,
+    "vs30": 760.0,
+    "vs30_source": "reference"
   },
   "source_model": {
     "kind": "gem",
@@ -22,7 +23,7 @@
     "region": ""
   },
   "confirmed": {
-    "region": "2026-10-12T17:38:51+00:00"
+    "region": "2026-10-16T13:39:59+00:00"
   },
   "run_id": null
 }
