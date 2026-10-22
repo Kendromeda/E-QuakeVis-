@@ -1,0 +1,87 @@
+{
+  "run_id": "ntt_revisi1_run1",
+  "created_utc": "2026-10-16T14:56:33+00:00",
+  "openquake_version": "3.26.2",
+  "model": {
+    "name": "GEM OpenQuake input model for Indonesia (IDN)",
+    "model_version": "v2024.0.0",
+    "authors": "Team for Updating Seismic Hazard Maps of Indonesia (PuSGeN, Kementerian Pekerjaan Umum) and GEM Foundation",
+    "license": "CC BY-NC-SA 4.0",
+    "source": "https://cloud.openquake.org/s/wCBESckQYgWgLqx",
+    "documentation": "https://hazard.openquake.org/gem/pdf/idn-report.pdf"
+  },
+  "region": {
+    "provinces": "all",
+    "spacing_degrees": 0.01,
+    "kabupaten": [
+      "Sumba Barat"
+    ]
+  },
+  "source_model": {
+    "name": "ntt_revisi1_sumber",
+    "path": "data/psha/source_models/ntt_revisi1_sumber",
+    "created_utc": "2026-10-16T13:36:47+00:00",
+    "description": "Tahap B: gempa latar dari katalog sendiri; sesar dan megathrust PuSGeN 2024 via GEM IDN v2024"
+  },
+  "num_sites": 620,
+  "approximations": {
+    "ps_grid_spacing_km": 0.0,
+    "pointsource_distance_km": 200,
+    "maximum_distance_km": {
+      "Subduction Interface": 1000.0,
+      "default": 300.0
+    }
+  },
+  "site_condition": {
+    "vs30_m_s": 760.0,
+    "vs30_type": "measured",
+    "z1pt0_m": null,
+    "z2pt5_km": null
+  },
+  "investigation_time_years": 50.0,
+  "poes": [
+    0.1,
+    0.02
+  ],
+  "return_periods_years": [
+    475,
+    2475
+  ],
+  "imts": [
+    "PGA",
+    "SA(0.2)",
+    "SA(1.0)"
+  ],
+  "gmpe_logic_tree": {
+    "source": "user",
+    "branches": {
+      "Active Shallow Crust": [
+        {
+          "gmpe": "BooreEtAl2014",
+          "weight": 1.0
+        }
+      ],
+      "Subduction Interface": [
+        {
+          "gmpe": "AbrahamsonGulerce2020SInterCascadia",
+          "weight": 1.0
+        }
+      ],
+      "Subduction Intraslab": [
+        {
+          "gmpe": "AbrahamsonGulerce2020SSlabCascadia",
+          "weight": 1.0
+        }
+      ]
+    }
+  },
+  "statistic": "mean over the full source and GMPE logic tree",
+  "units": "g",
+  "runtime_seconds": 626,
+  "outputs": {
+    "hazard_map.csv": "64cbd81c38cd5238d4e693cd7152964a33cb9e262695529ffc8133a542200909",
+    "hazard_curves-PGA.csv": "f3ff577a9189714b248ffab84e2403a85de1550c436a69006358351ffa3265b6",
+    "hazard_curves-SA(0.2).csv": "910ba506c83b391319dd6d19f67bb80e49b2bc50ef45ea1ec5eeb1cbc64919f9",
+    "hazard_curves-SA(1.0).csv": "437cf0566a0ff57a0fbebf5b393de9a9443244d6f50a75236efdc4bdf2efa8b0"
+  }
+}

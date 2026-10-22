@@ -107,3 +107,42 @@ def test_hazard_source_and_legend_space_are_included():
     without = _sidebar_legend_block_height(1.0, 1.0, 100, **common)
     with_hazard = _sidebar_legend_block_height(1.0, 1.0, 100, hazard_class_count=12, **common)
     assert with_hazard - without == 8 + 27 + 6 * 24 + 6
+
+
+def _red_fraction(snapshot: bytes) -> float:
+    with Image.open(BytesIO(snapshot)) as image:
+        rgb = np.asarray(image.convert("RGB")).astype(int)
+    red = (rgb[..., 0] > 200) & (rgb[..., 1] < 120) & (rgb[..., 2] < 120)
+    return float(red.mean())
+
+
+def test_numeric_scale_widens_the_hazard_map_extent():
+    common = dict(
+        hazard_layer=hazard_layer(((0, 0), (0, 0))),
+        output_size=(320, 240), padding_percent=0, marker_scale_percent=100,
+        show_basemap=False, show_earthquakes=False, show_faults=False,
+        show_trenches=False, show_provinces=False, show_region_labels=False,
+        selection_bounds=(106.0, -7.0, 108.0, -5.0),
+    )
+    automatic = capture_filtered_map(pd.DataFrame(), EMPTY, EMPTY, **common)
+    # 1 : 10.000.000 spans ~560 km at 320 px / 144 dpi, more than the 2° run.
+    numeric = capture_filtered_map(pd.DataFrame(), EMPTY, EMPTY,
+                                   representative_scale_denominator=10_000_000, **common)
+    assert _red_fraction(automatic) > 0.5
+    assert 0.0 < _red_fraction(numeric) < _red_fraction(automatic) / 2
+
+
+def test_full_sheet_renders_hazard_with_numeric_scale_and_large_logo():
+    logo = BytesIO()
+    Image.new("RGB", (60, 60), "#336699").save(logo, format="PNG")
+    png_bytes, pdf_bytes = render_publication_map(
+        pd.DataFrame(), EMPTY, EMPTY,
+        hazard_layer=hazard_layer(),
+        title="Peta Bahaya Gempa Uji", institution_name="Instansi Uji",
+        logo_bytes=logo.getvalue(), logo_scale_percent=100,
+        representative_scale_denominator=1_000_000,
+        show_basemap=False, show_earthquakes=False, show_faults=False,
+        show_trenches=False, show_provinces=False, show_inset=False,
+        selection_bounds=(106.0, -7.0, 108.0, -5.0),
+    )
+    assert png_bytes.startswith(b"\x89PNG") and pdf_bytes.startswith(b"%PDF")

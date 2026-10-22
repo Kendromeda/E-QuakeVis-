@@ -1,0 +1,20 @@
+{
+  "Active Shallow Crust": [
+    {
+      "gmpe": "BooreEtAl2014",
+      "weight": 1.0
+    }
+  ],
+  "Subduction Interface": [
+    {
+      "gmpe": "AbrahamsonGulerce2020SInterCascadia",
+      "weight": 1.0
+    }
+  ],
+  "Subduction Intraslab": [
+    {
+      "gmpe": "AbrahamsonGulerce2020SSlabCascadia",
+      "weight": 1.0
+    }
+  ]
+}
