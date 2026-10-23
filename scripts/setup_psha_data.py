@@ -14,9 +14,8 @@ Parts (``--only`` picks some; what already exists is skipped unless ``--force``)
 - ``catalog``: merged Mw catalogue, for Tahap B source models.
 
 ``vs30`` and ``catalog`` come ready-made from the GitHub Release named in
-``data/psha/data_release.json`` (checked with SHA-256). The repository is
-private, so the release is fetched with the GitHub CLI (``gh auth login``
-once). With ``--from-source`` they are rebuilt from the original sources
+``data/psha/data_release.json`` (checked with SHA-256), with the GitHub CLI
+when it is installed and from the public download URL otherwise. With ``--from-source`` they are rebuilt from the original sources
 instead: the USGS grid (610 MB) for ``vs30``; the ISC Bulletin download (many
 hours) plus ``build_mw_catalog.py`` for ``catalog``.
 """
@@ -74,7 +73,7 @@ def run(command: list[str]) -> None:
 
 
 def fetch_asset(release: dict, name: str, folder: Path) -> Path:
-    """Download one release asset with gh (private repo), else the public URL."""
+    """Download one release asset with gh when installed, else the public URL."""
     if shutil.which("gh"):
         result = subprocess.run(
             ["gh", "release", "download", release["tag"], "-R", release["repository"],
@@ -93,8 +92,8 @@ def fetch_asset(release: dict, name: str, folder: Path) -> Path:
             return path
     except OSError as exc:
         raise SetupError(
-            f"Could not download {name} from the GitHub Release ({exc}). The repository is "
-            "private: install the GitHub CLI and run 'gh auth login', or use --from-source."
+            f"Could not download {name} from the GitHub Release ({exc}). Check the "
+            "connection and retry, or rebuild it with --from-source."
         ) from exc
 
 
